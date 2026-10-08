@@ -154,6 +154,25 @@ public sealed class PersistentFileLoggerProviderTests : IDisposable
     }
 
     [Fact]
+    public void AFailedWriteDropsOnlyItsBatchAndTheWriterContinues()
+    {
+        // A directory in place of today's file makes every open of it fail, as an unusable file would.
+        Directory.CreateDirectory(Path.Combine(_directory, "auth-2026-10-08.log"));
+
+        var clock = new MutableTimeProvider(Day1);
+        using (var provider = Provider(clock))
+        {
+            var logger = provider.CreateLogger("Category");
+            logger.Log(LogLevel.Information, 0, "lost on day one", null, (state, _) => state);
+
+            clock.Advance(TimeSpan.FromSeconds(2));
+            logger.Log(LogLevel.Information, 0, "kept on day two", null, (state, _) => state);
+        }
+
+        Assert.EndsWith(" kept on day two", Assert.Single(ReadLines("auth-2026-10-09.log")), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void IgnoresDisabledLevelsAndToleratesASecondDispose()
     {
         var provider = Provider(new MutableTimeProvider(Day1));

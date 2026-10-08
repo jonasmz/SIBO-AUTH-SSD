@@ -150,7 +150,7 @@ deployment, lifecycle, backup/restore and end-to-end sections and the log review
 | State | Command | Result |
 |---|---|---|
 | Build | `dotnet build Authentication.slnx --no-incremental -warnaserror` | 0 errors, 0 warnings — PASS |
-| Tests | `dotnet test` | 202 of 202 passed (unit and integration) — PASS |
+| Tests | `dotnet test` | 203 of 203 passed (unit and integration) — PASS |
 | Startup | `tests/acceptance/phase-8.sh`, deployment section | four services from empty storage, ready — PASS |
 | Feature | same script: lifecycle, backup/restore, end-to-end, log review | all PASS (below) |
 | Regression | same script, chained `phase-7.sh` (Phases 6 to 1) | `Phase 7 acceptance: ALL PASS` |

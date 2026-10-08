@@ -11,7 +11,8 @@ namespace Authentication.Infrastructure.Logging;
 /// unbounded in-memory channel, so <c>ILogger.Log</c> never performs file I/O; one background writer appends them,
 /// in order, to <c>auth-yyyy-MM-dd.log</c> by UTC date. A single reader means concurrent events can never
 /// interleave, and an unbounded queue means none is dropped. Files older than the retention are deleted at
-/// startup and at each daily rotation; disposing drains the queue.
+/// startup and at each daily rotation; disposing drains the queue. A failed write drops only its batch from the
+/// file; should the writer ever stop, the queue is closed so it cannot grow unbounded.
 /// </summary>
 [ProviderAlias("File")]
 public sealed class PersistentFileLoggerProvider : ILoggerProvider
@@ -67,43 +68,104 @@ public sealed class PersistentFileLoggerProvider : ILoggerProvider
 
     private async Task WriteAsync()
     {
-        DeleteExpiredFiles(DateOnly.FromDateTime(UtcNow().UtcDateTime));
+        try
+        {
+            await DrainAsync().ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            // An unexpected failure ends the writer. Completing the queue makes Enqueue a no-op, so the unbounded
+            // channel cannot keep growing for the rest of the process; the console still carries every event.
+            _queue.Writer.TryComplete();
+            while (_queue.Reader.TryRead(out _))
+            {
+            }
+
+            ReportFailure("stopped", exception);
+        }
+    }
+
+    private async Task DrainAsync()
+    {
+        TryDeleteExpiredFiles(DateOnly.FromDateTime(UtcNow().UtcDateTime));
 
         StreamWriter? file = null;
         DateOnly? fileDate = null;
+        var failing = false;
         try
         {
             var reader = _queue.Reader;
             while (await reader.WaitToReadAsync().ConfigureAwait(false))
             {
-                while (reader.TryRead(out var entry))
+                try
                 {
-                    if (fileDate != entry.UtcDate)
+                    while (reader.TryRead(out var entry))
                     {
-                        if (file is not null)
+                        if (fileDate != entry.UtcDate)
                         {
-                            await file.DisposeAsync().ConfigureAwait(false);
-                            DeleteExpiredFiles(entry.UtcDate);
+                            if (file is not null)
+                            {
+                                await file.DisposeAsync().ConfigureAwait(false);
+                                file = null;
+                                TryDeleteExpiredFiles(entry.UtcDate);
+                            }
+
+                            file = Open(entry.UtcDate);
+                            fileDate = entry.UtcDate;
                         }
 
-                        file = Open(entry.UtcDate);
-                        fileDate = entry.UtcDate;
+                        await file!.WriteLineAsync(entry.Line).ConfigureAwait(false);
                     }
 
-                    await file!.WriteLineAsync(entry.Line).ConfigureAwait(false);
+                    await file!.FlushAsync().ConfigureAwait(false);
+                    failing = false;
                 }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                {
+                    // A transient failure (full disk, a file that cannot be opened) drops the current batch from the
+                    // file, which is reopened for the next one, instead of ending the writer.
+                    if (!failing)
+                    {
+                        ReportFailure("dropping events until a write succeeds", exception);
+                        failing = true;
+                    }
 
-                await file!.FlushAsync().ConfigureAwait(false);
+                    file = await CloseQuietlyAsync(file).ConfigureAwait(false);
+                    fileDate = null;
+                }
             }
         }
         finally
         {
-            if (file is not null)
-            {
-                await file.DisposeAsync().ConfigureAwait(false);
-            }
+            await CloseQuietlyAsync(file).ConfigureAwait(false);
         }
     }
+
+    private static async Task<StreamWriter?> CloseQuietlyAsync(StreamWriter? file)
+    {
+        if (file is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            await file.DisposeAsync().ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // The buffered lines could not be flushed; they belong to the batch being dropped.
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Written straight to standard error, never through <c>ILogger</c> (which would feed this provider), and with
+    /// the exception type only: its message may carry a path or other configuration value.
+    /// </summary>
+    private static void ReportFailure(string outcome, Exception exception) =>
+        Console.Error.WriteLine($"Persistent log file writer {outcome} after {exception.GetType().FullName}; console logging continues.");
 
     private StreamWriter Open(DateOnly utcDate)
     {
@@ -114,6 +176,18 @@ public sealed class PersistentFileLoggerProvider : ILoggerProvider
     }
 
     /// <summary>Deletes <c>auth-yyyy-MM-dd.log</c> files dated before <c>today − retention</c>; never other files.</summary>
+    private void TryDeleteExpiredFiles(DateOnly today)
+    {
+        try
+        {
+            DeleteExpiredFiles(today);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // Retried at the next rotation; retention must not stop the writer.
+        }
+    }
+
     private void DeleteExpiredFiles(DateOnly today)
     {
         var oldestKept = today.AddDays(-_retentionDays);
@@ -128,7 +202,7 @@ public sealed class PersistentFileLoggerProvider : ILoggerProvider
                 {
                     File.Delete(path);
                 }
-                catch (IOException)
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
                 {
                     // Retried at the next rotation; logging must not fail because an old file is busy.
                 }
