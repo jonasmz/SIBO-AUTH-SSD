@@ -104,20 +104,36 @@ readiness `503` → handler. Logout is not limited (not in NFR-SEC-BF-007, spec 
 
 ## 8. Forwarded headers and trusted proxies
 
-- **Decision**: `services.Configure<ForwardedHeadersOptions>`: `ForwardedHeaders =
-  XForwardedFor | XForwardedProto`; `KnownProxies.Clear()` and `KnownIPNetworks.Clear()` (the
-  framework pre-trusts loopback), then add `ReverseProxy:TrustedProxies` (comma-separated IPs) and
-  `ReverseProxy:TrustedNetworks` (comma-separated CIDR, parsed with `System.Net.IPNetwork.TryParse`);
-  `ForwardLimit = null`; `RequireHeaderSymmetry = false`. `app.UseForwardedHeaders()` is the first
-  middleware. Unparsable entries fail startup naming the setting only. `KnownNetworks` (obsolete
-  in .NET 10) is not used.
-- **Rationale**: SRS NFR-NET-001–003, Technical Constraints §14.4. With the lists empty the
-  middleware applies nothing because the connecting address is never trusted (FR-008, scenario 3).
-  `ForwardLimit = null` consumes the `X-Forwarded-For` list from the right only while each hop is
-  trusted, so entries before the first authorized hop are ignored (spec edge case). Host is not
-  forwarded into the app; nothing in the service builds absolute URLs.
-- **Alternatives**: `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` (trusts any source — violates
-  NFR-NET-002); trusting the whole Docker default network implicitly (not explicit configuration).
+- **Decision**: `services.Configure<ForwardedHeadersOptions>` builds the options from
+  `ReverseProxy:TrustedProxies` (comma-separated IPs) and `ReverseProxy:TrustedNetworks`
+  (comma-separated CIDR, parsed with `System.Net.IPNetwork.TryParse`) after clearing `KnownProxies` and
+  `KnownIPNetworks` (the framework pre-trusts loopback; `KnownNetworks` is obsolete in .NET 10 and
+  unused):
+  - **Both lists empty** (the default): `ForwardedHeaders = None`. Forwarded-header processing is
+    disabled entirely; no header has any effect.
+  - **At least one entry**: `ForwardedHeaders = XForwardedFor | XForwardedProto`,
+    `ForwardLimit = null`, `RequireHeaderSymmetry = false`. Only requests whose connecting peer (and each
+    further hop) is in the lists may supply the effective client address and scheme.
+  `app.UseForwardedHeaders()` is the first middleware. Unparsable entries fail startup naming the setting
+  only. `X-Forwarded-Host` is never honored.
+- **Rationale**: SRS NFR-NET-001–003, Technical Constraints §14.4. The framework middleware checks the
+  sender only when at least one proxy or network is listed: with both lists empty it trusts every sender
+  and would let any client choose its address. This was demonstrated by a spoofed-header test during
+  implementation, so an empty configuration must switch the processing off instead of relying on the
+  lists (FR-008, scenario 3). With entries present, `ForwardLimit = null` consumes the `X-Forwarded-For`
+  list from the right only while each hop is trusted, so entries before the first authorized hop are
+  ignored (spec edge case). The address the application acts on, and therefore the rate-limit partition and
+  the log field, is the effective client address or, for an untrusted sender, the real connecting address.
+  Host is not forwarded into the app; nothing in the service builds absolute URLs.
+- **Alternative configuration path**: `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` makes the host register
+  its own permissive options (both header types, lists cleared), which alone would trust any source and
+  violate NFR-NET-002. The application's registration runs after the host defaults and replaces those
+  options, so the variable cannot widen trust: the spoofed-header scenario was re-run with the variable set
+  and the forged header still had no effect. The variable is not set by the Dockerfiles, `compose.yml`, or
+  `.env.example`, and `docs/phase-7-operations.md` tells operators not to set it.
+- **Alternatives considered**: relying on empty lists to mean "trust nothing" (rejected: the framework
+  treats them as "trust everyone"); trusting the whole Docker default network implicitly (not explicit
+  configuration).
 
 ## 9. Reference proxy and acceptance container (FR-010/020)
 
