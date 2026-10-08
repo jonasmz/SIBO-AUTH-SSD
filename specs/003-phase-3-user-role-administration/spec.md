@@ -8,12 +8,19 @@
 
 **Input**: Phase 3 — Administración de usuarios y roles
 
+## Clarifications
+
+### Session 2026-10-08
+
+- Q: Which user attributes may the update operation modify? → A: Only the email; any other attribute in the request is rejected as an invalid request (enable/disable and roles have their own operations, and password change is Phase 5).
+- Q: Does setting a user's roles replace the whole role set or only add? → A: Complete replacement; the user ends with exactly the roles supplied, omitted roles are removed, and an empty list leaves the user with no roles.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Administrators Manage Users (Priority: P1)
 
 An authenticated administrator creates users, lists them, retrieves one by identifier, and
-updates the permitted attributes of a user. Every administrative operation is available only to
+updates the email of a user. Every administrative operation is available only to
 callers holding a valid access token with the `Administrator` role.
 
 **Why this priority**: Without protected user administration there is no way to manage identities
@@ -21,7 +28,7 @@ beyond the single built-in administrator, and every later administrative capabil
 same access control.
 
 **Independent Test**: With the Phase 1 administrator token, create a user, list users, retrieve the
-user, and update a permitted attribute; then repeat a representative call with no token and with a
+user, and update its email; then repeat a representative call with no token and with a
 valid token lacking the `Administrator` role.
 
 **Acceptance Scenarios**:
@@ -36,9 +43,10 @@ valid token lacking the `Administrator` role.
 4. **Given** several users exist, **When** the administrator lists users or retrieves one by
    identifier, **Then** each entry shows its identifier, email, enabled state, lockout state, and
    roles, and never any prohibited identity data.
-5. **Given** an existing user, **When** the administrator updates a permitted attribute to a valid
-   value, **Then** the change is applied; **When** the new email belongs to another user, **Then**
-   the update is rejected.
+5. **Given** an existing user, **When** the administrator updates the email to a valid unused value,
+   **Then** the change is applied and login now uses the new email; **When** the new email belongs
+   to another user, **Then** the update is rejected; **When** the request also carries any other
+   attribute, **Then** it is rejected as invalid and nothing changes.
 6. **Given** no access token, an invalid token, or a valid token without the `Administrator` role,
    **When** any administrative endpoint is called, **Then** the response is `401 Unauthorized` for
    the first two and `403 Forbidden` for the last.
@@ -88,11 +96,11 @@ remove it, delete the unassigned role, and confirm the deletion of an assigned r
 1. **Given** a valid administrator token, **When** a role is created with a new name, **Then** it
    is created and listed; **When** the normalized name already exists, **Then** the creation is
    rejected as a duplicate.
-2. **Given** an existing role and a user, **When** the administrator sets the user's roles,
-   **Then** the user holds exactly the resulting roles and a subsequent login issues an access
-   token whose role claims match them.
-3. **Given** a user holding a role, **When** the administrator sets the user's roles without it,
-   **Then** the role is removed from that user and from nobody else.
+2. **Given** an existing role and a user, **When** the administrator sets the user's roles to a
+   list, **Then** the user holds exactly the roles in that list and a subsequent login issues an
+   access token whose role claims match them.
+3. **Given** a user holding a role, **When** the administrator sets the user's roles to a list
+   that omits it, **Then** the role is removed from that user and from nobody else.
 4. **Given** a role assigned to no user, **When** it is deleted, **Then** it no longer exists;
    **When** the role is assigned to at least one user, **Then** the deletion is refused and nothing
    changes.
@@ -176,12 +184,10 @@ first can be disabled.
   unknown identifier MUST yield `404 Not Found`.
 - **FR-006**: No administrative response MUST ever contain a password or password hash, a security
   stamp, a token, a cryptographic key, or any other prohibited identity data.
-- **FR-007**: An administrator MUST be able to update only the user attributes explicitly permitted
-  by the contract; any other attribute in the request MUST cause the request to be rejected.
-  Updates MUST validate email uniqueness. [NEEDS CLARIFICATION: Which user attributes may the
-  update operation modify — the email only (the sole attribute the baseline implies through its
-  email-uniqueness rule for updates), or additional attributes? Phase 3 assumes email only until
-  confirmed.]
+- **FR-007**: An administrator MUST be able to update a user's email, and ONLY the email; any other
+  attribute in an update request (including the enabled state, roles, and password) MUST cause the
+  request to be rejected as an invalid request. Updates MUST validate email uniqueness after
+  normalization and MUST NOT conflict with the user's own current email.
 - **FR-008**: The system MUST NOT provide physical deletion of users; withdrawing access is done by
   disabling.
 - **FR-009**: An administrator MUST be able to disable and to enable a user. A disabled user MUST
@@ -200,13 +206,11 @@ first can be disabled.
 - **FR-014**: An administrator MUST be able to delete a role only when it is assigned to no user;
   deleting an assigned role MUST be refused and change nothing. An unknown role MUST yield
   `404 Not Found`.
-- **FR-015**: An administrator MUST be able to set the roles a user holds, adding and removing roles
-  in a single operation, using only roles that exist. A reference to a nonexistent role MUST cause
-  the whole operation to be rejected as an invalid request with no part applied, and an unknown user
-  MUST yield `404 Not Found`. [NEEDS CLARIFICATION: Does the operation that sets a user's roles
-  replace the user's complete role set with the list supplied (so omitted roles are removed), or
-  only add the listed roles? The baseline defines a single assignment endpoint for both assigning
-  and removing roles; Phase 3 assumes complete replacement until confirmed.]
+- **FR-015**: An administrator MUST be able to set the roles a user holds. The operation replaces the
+  user's complete role set: the user ends with exactly the roles supplied, omitted roles are
+  removed, and an empty list leaves the user with no roles. Only roles that exist may be supplied;
+  a reference to a nonexistent role MUST cause the whole operation to be rejected as an invalid
+  request with no part applied, and an unknown user MUST yield `404 Not Found`.
 - **FR-016**: The system MUST NOT allow the last enabled administrator — the only enabled user
   holding the `Administrator` role — to be disabled, nor to lose the `Administrator` role, by any
   operation or combination of operations; each refused operation MUST leave the state unchanged and
