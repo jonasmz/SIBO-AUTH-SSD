@@ -1,0 +1,234 @@
+openapi: 3.1.0
+info:
+  title: Authentication API - Phase 4 Session Contract
+  version: 4.0.0
+  description: >-
+    Renewable browser-session additions for Phase 4. The access-token response shape is unchanged.
+    The raw refresh credential appears only in the auth_refresh cookie and never in a JSON body.
+servers:
+  - url: http://localhost:8080
+    description: Local development
+paths:
+  /api/auth/login:
+    post:
+      summary: Authenticate and establish a renewable browser session
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Existing access-token response plus a new renewable-session cookie.
+          headers:
+            Set-Cookie:
+              description: >-
+                auth_refresh=<opaque>; Path=/api/auth; HttpOnly; SameSite=Strict; Expires=<family
+                expiry>. Secure is also present in Production. Domain is omitted.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessTokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/InvalidCredentials'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/auth/refresh:
+    post:
+      summary: Rotate the browser refresh credential and issue a current access token
+      operationId: refresh
+      security:
+        - refreshCookie: []
+      parameters:
+        - $ref: '#/components/parameters/BrowserOrigin'
+      responses:
+        '200':
+          description: Credential consumed; replacement cookie and access token issued.
+          headers:
+            Set-Cookie:
+              description: >-
+                Replacement auth_refresh cookie with the same absolute family expiry and attributes
+                as login. Rotation does not extend expiry.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessTokenResponse'
+        '401':
+          $ref: '#/components/responses/InvalidRefreshCredential'
+        '403':
+          $ref: '#/components/responses/UntrustedOrigin'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/auth/logout:
+    post:
+      summary: End the renewable session represented by the browser cookie
+      operationId: logout
+      security:
+        - refreshCookie: []
+        - {}
+      parameters:
+        - $ref: '#/components/parameters/BrowserOrigin'
+      responses:
+        '204':
+          description: >-
+            Idempotent success. The identified family is revoked when possible and Set-Cookie
+            expires auth_refresh using the same Path and security attributes. This response also
+            applies when the cookie is absent, malformed, unknown, expired or already revoked.
+          headers:
+            Set-Cookie:
+              description: Expired auth_refresh cookie with Path=/api/auth, HttpOnly and SameSite=Strict.
+              schema:
+                type: string
+        '403':
+          $ref: '#/components/responses/UntrustedOrigin'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/admin/users/{id}/revoke-sessions:
+    post:
+      summary: Revoke every renewable-session family for one user
+      operationId: revokeUserSessions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Existing Identity user identifier.
+      responses:
+        '204':
+          description: Every active renewable-session family for the user is revoked.
+        '401':
+          $ref: '#/components/responses/AuthenticationRequired'
+        '403':
+          $ref: '#/components/responses/AdministratorRequired'
+        '404':
+          $ref: '#/components/responses/UserNotFound'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+components:
+  securitySchemes:
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: auth_refresh
+      description: Opaque browser credential. It is HttpOnly and never available in response JSON.
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    BrowserOrigin:
+      name: Origin
+      in: header
+      required: true
+      description: >-
+        Must exactly match the configured external frontend origin by scheme, host and effective
+        port. Missing, malformed, opaque or mismatched values are rejected before cookie processing.
+      schema:
+        type: string
+        format: uri
+  schemas:
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+    AccessTokenResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - accessToken
+        - expiresAtUtc
+      properties:
+        accessToken:
+          type: string
+          description: Existing RS256 access JWT.
+        expiresAtUtc:
+          type: string
+          format: date-time
+          description: Existing UTC access-token expiry field.
+    ProblemDetails:
+      type: object
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+  responses:
+    BadRequest:
+      description: The request is invalid.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    InvalidCredentials:
+      description: Invalid credentials; disabled and locked users remain externally equivalent.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    InvalidRefreshCredential:
+      description: >-
+        Invalid refresh credentials. The response does not distinguish malformed, unknown, expired,
+        revoked, consumed/replayed, disabled-user, locked-user or family state.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    UntrustedOrigin:
+      description: The browser request did not carry the configured external frontend origin.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    AuthenticationRequired:
+      description: A valid access token is required.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    AdministratorRequired:
+      description: The authenticated caller lacks the Administrator role.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    UserNotFound:
+      description: The user was not found.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    ServiceUnavailable:
+      description: Authentication API persistence is not ready or available.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
