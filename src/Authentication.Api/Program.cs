@@ -1,6 +1,7 @@
 using Authentication.Api.Features.Administration;
 using Authentication.Api.Features.Health;
 using Authentication.Api.Features.Login;
+using Authentication.Api.Features.PasswordRecovery;
 using Authentication.Api.Features.Passwords;
 using Authentication.Infrastructure;
 using Authentication.Api.Features.Sessions;
@@ -25,6 +26,8 @@ app.MapLoginEndpoint();
 app.MapRefreshEndpoint();
 app.MapLogoutEndpoint();
 app.MapChangePasswordEndpoint();
+app.MapForgotPasswordEndpoint();
+app.MapResetPasswordEndpoint();
 app.MapAdministrationEndpoints();
 
 await app.RunAsync();

@@ -1,4 +1,5 @@
 using Authentication.Application.Features.Login;
+using Authentication.Application.Features.PasswordRecovery;
 using Authentication.Application.Features.Passwords;
 using Authentication.Application.Features.Roles;
 using Authentication.Application.Features.Sessions;
@@ -80,6 +81,9 @@ public static class DependencyInjection
         services.AddScoped<IUserAdministration, UserAdministration>();
         services.AddScoped<IRoleAdministration, RoleAdministration>();
         services.AddScoped<IPasswordChange, PasswordChange>();
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.AddScoped<IPasswordRecovery, PasswordRecovery>();
+        services.AddScoped<ForgotPasswordHandler>();
 
         services.AddDbContext<AuthenticationDbContext>(options =>
             options.UseSqlite(sqliteOptions.ConnectionString));
