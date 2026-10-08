@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -34,6 +34,7 @@
 - Validation pass 1: all items pass except the intentional open marker. The endpoint path is
   retained because it is the required public contract; no class, schema, transaction, or storage
   technique is prescribed.
-- One genuine ambiguity (FR-017): which session counts as "current" when revoking "other" sessions.
-  Resolve with `/speckit-clarify` before planning; US2 scenario 4 depends on it.
+- Clarification session 2026-10-08 resolved the one genuine ambiguity: the current session is the
+  family identified by a usable `auth_refresh` cookie of the same user; without one, all families
+  are revoked (FR-008, FR-017, US2 scenarios 4–5).
 - Gate G4 is closed in the roadmap; no dependency blocks this phase.

@@ -5,6 +5,12 @@
 **Status**: Draft  
 **Input**: Phase 5 — Authenticated Password Change
 
+## Clarifications
+
+### Session 2026-10-08
+
+- Q: Which browser session is kept as "the current session" when revoking the user's other sessions? → A: The family identified by the `auth_refresh` cookie sent with the request, if usable and owned by the same user; all other families are revoked. With no usable cookie, all of the user's families are revoked.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Authenticated Password Change (Priority: P1)
@@ -57,8 +63,12 @@ verify the session that was not used for the change can no longer refresh.
 3. **Given** an access token issued before the change, **When** it is presented to the Business
    APIs before its natural expiry, **Then** it remains valid under the unchanged local JWT
    validation; no blacklist or remote check is introduced.
-4. **Given** the current session (see Assumptions and the open clarification below), **When** the
-   change succeeds, **Then** its treatment follows the clarified rule.
+4. **Given** the change request carries a usable refresh cookie belonging to the same user,
+   **When** the change succeeds, **Then** the family it identifies remains active and can still
+   refresh, while all other families are revoked.
+5. **Given** the change request carries no usable refresh cookie (absent, malformed, unknown,
+   expired, revoked, or owned by another user), **When** the change succeeds, **Then** every active
+   family of the user is revoked.
 
 ---
 
@@ -121,9 +131,12 @@ restart Authentication API, and verify only the new password signs in.
   through the existing login, and no other account data changes.
 - **FR-007**: No additional reauthentication, email verification, reset token, or administrator
   approval MUST be required beyond a valid access token and the current-password check.
-- **FR-008**: After a successful change, every other active renewable-session family of the user
-  MUST be revoked and MUST NOT subsequently refresh, using the Phase 4 revocation rules. The
-  treatment of the session used to make the change is governed by the open clarification.
+- **FR-008**: After a successful change, every active renewable-session family of the user other
+  than the current session MUST be revoked and MUST NOT subsequently refresh, using the Phase 4
+  revocation rules. The current session is the family identified by the `auth_refresh` cookie sent
+  with the request when that credential is usable and belongs to the same user; it remains active.
+  When no such usable cookie accompanies the request, every active family of the user MUST be
+  revoked.
 - **FR-009**: A failed change MUST NOT revoke any session and MUST NOT alter the credential.
 - **FR-010**: The change and the resulting session revocation MUST be observed as one outcome: a
   success response MUST NOT be returned while any session that should have been revoked can still
@@ -148,13 +161,9 @@ restart Authentication API, and verify only the new password signs in.
   MUST NOT introduce forgot-password, reset-password, email delivery, reset tokens, email
   verification, multi-factor authentication, administrator-initiated resets, password history or
   expiry, additional session-management endpoints, or future-phase abstractions.
-- **FR-017**: **[NEEDS CLARIFICATION: how is "the current session" identified?]** The requirement
-  to revoke the user's *other* active sessions needs a definition of the session that is kept. The
-  access token carries no session reference, and the refresh cookie accompanies browser requests to
-  this route but is neither required nor validated by this operation today. Whether to keep the
-  session identified by the presented refresh cookie, revoke every session including the current
-  one, or define a different rule materially changes the observable outcome. Do not invent session
-  identifiers or claims to answer this.
+- **FR-017**: The refresh cookie MUST be used only to identify which family to keep; it MUST NOT
+  authenticate or authorize the request, no cookie-dependent state is changed by presenting it, and
+  no session identifier or additional access-token claim is introduced.
 
 ### Applicable Non-Functional Requirements
 
