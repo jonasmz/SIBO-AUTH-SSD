@@ -2,7 +2,7 @@
 
 **Documento:** Restricciones técnicas y de implementación  
 **Proyecto:** Authentication API  
-**Versión:** 1.0  
+**Versión:** 1.1  
 **Fecha:** 2026-10-06  
 **Documentos relacionados:** `SRS_Authentication_API_v1.1.md`, `ROADMAP_SPECKIT_AUTH_API_v1.1.md`  
 **Ámbito:** decisiones tecnológicas, arquitectónicas y de desarrollo  
@@ -162,6 +162,8 @@ tests/
 ```
 
 Podrá incorporarse un proyecto adicional de testing exclusivamente si aparece una necesidad real y no puede resolverse razonablemente en los dos proyectos anteriores.
+
+Mientras las APIs de negocio reales no existan en este repositorio, podrá incorporarse exclusivamente un proyecto de producto adicional, `src/ReferenceConsumer.Api`, como consumidor de referencia mínimo desplegado como `api-a` y `api-b`. Deberá ser una única aplicación Minimal API sin capas Domain/Application/Infrastructure, sin referencias a proyectos `Authentication.*`, sin persistencia ni capacidad de negocio, y solo validará JWT localmente con la clave pública. Su permanencia en el Compose final (Roadmap Phase 8) o su reemplazo por las APIs de negocio reales requiere decisión explícita. *(Enmienda 1.1, 2026-10-07; ver DEC-009 del Roadmap.)*
 
 ## 5.3 Dependencias permitidas
 

@@ -4,6 +4,7 @@
     <Project Path="src/Authentication.Application/Authentication.Application.csproj" />
     <Project Path="src/Authentication.Domain/Authentication.Domain.csproj" />
     <Project Path="src/Authentication.Infrastructure/Authentication.Infrastructure.csproj" />
+    <Project Path="src/ReferenceConsumer.Api/ReferenceConsumer.Api.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Authentication.IntegrationTests/Authentication.IntegrationTests.csproj" />

@@ -69,7 +69,7 @@ FINGERPRINT_BEFORE="$(fingerprint)"
 
 # --- Empty startup ---------------------------------------------------------------------
 [ ! -e "$STATE/data/auth.db" ] || fail "storage was not empty"
-docker compose up --build -d >/dev/null
+docker compose up --build -d auth-api >/dev/null
 wait_ready || fail "service did not become ready from empty storage"
 [ "$(curl --silent "$BASE/health/live")" = '{"status":"healthy"}' ] || fail "liveness payload"
 [ "$(curl --silent "$BASE/health/ready")" = '{"status":"healthy"}' ] || fail "readiness payload"
@@ -88,7 +88,7 @@ pass "restart: ready, login, stable subject"
 docker compose down -v >/dev/null
 test -s "$STATE/data/auth.db" || fail "SQLite file lost after down -v"
 test -s "$STATE/keys/jwt-private.pem" || fail "private key lost after down -v"
-docker compose up -d >/dev/null
+docker compose up -d auth-api >/dev/null
 wait_ready || fail "service not ready after down -v"
 SUBJECT_3="$(login_subject)" || fail "login after down -v"
 [ "$SUBJECT_1" = "$SUBJECT_3" ] || fail "subject changed across down -v"
@@ -99,7 +99,7 @@ docker compose down -v >/dev/null
 # --- Initialization failure never reports ready ----------------------------------------
 cp "$STATE/keys/jwt-private.pem" "$FAILURE_STATE/" 
 chmod 0555 "$FAILURE_STATE"
-AUTH_SQLITE_HOST_PATH="$FAILURE_STATE" docker compose up -d >/dev/null
+AUTH_SQLITE_HOST_PATH="$FAILURE_STATE" docker compose up -d auth-api >/dev/null
 sleep 8
 if curl --fail --silent "$BASE/health/ready" >/dev/null 2>&1; then fail "reported ready despite unwritable storage"; fi
 STATUS="$(docker compose ps --all --format '{{.State}}' auth-api)"
@@ -114,7 +114,7 @@ docker compose down -v >/dev/null 2>&1 || true
 # --- Missing signing key never reports ready -------------------------------------------
 EMPTY_KEYS="$(mktemp -d "${TMPDIR:-/tmp}/auth-api-phase1-nokey.XXXXXX")"
 chmod 0755 "$EMPTY_KEYS"
-AUTH_RSA_HOST_PATH="$EMPTY_KEYS" docker compose up -d >/dev/null
+AUTH_RSA_HOST_PATH="$EMPTY_KEYS" docker compose up -d auth-api >/dev/null
 sleep 8
 if curl --fail --silent "$BASE/health/ready" >/dev/null 2>&1; then fail "reported ready without a signing key"; fi
 [ "$(docker compose ps --all --format '{{.State}}' auth-api)" = "exited" ] || fail "container did not exit without a signing key"

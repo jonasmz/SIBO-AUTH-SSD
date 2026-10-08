@@ -106,6 +106,13 @@ tests/
 └── Authentication.IntegrationTests/
 ```
 
+Technical Constraints §5.2 (amendment 1.1, 2026-10-07; Roadmap DEC-009) additionally permits
+exactly one reference consumer project, `src/ReferenceConsumer.Api`, deployed as `api-a` and
+`api-b` while the real Business APIs do not exist in this repository. It MUST be a single
+Minimal API without Domain/Application/Infrastructure layers, MUST NOT reference any
+`Authentication.*` project, and MUST NOT own persistence or business capability. No other
+product project is permitted without a further baseline amendment.
+
 Domain MUST remain independent of every other product project. Application MAY depend on
 Domain. Infrastructure MAY depend on Application and Domain. Api MUST be the composition
 root and MAY depend on Application and Infrastructure. Application MUST NOT depend on
@@ -389,4 +396,4 @@ non-semantic clarifications and corrections. Initial adoption is `1.0.0`. Amendm
 retain the original ratification date, update the last-amended date and keep version metadata
 consistent with the documented change.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-07 | **Last Amended**: 2026-10-07
+**Version**: 1.1.0 | **Ratified**: 2026-10-07 | **Last Amended**: 2026-10-07
