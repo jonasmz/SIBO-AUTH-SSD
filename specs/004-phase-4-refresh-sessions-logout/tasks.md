@@ -93,17 +93,17 @@ disabled, and locked cases all return indistinguishable 401 responses without co
 
 ### Tests for User Story 2
 
-- [ ] T021 [P] [US2] Add refresh integration scenarios for valid rotation without an `Authorization` header, an irrelevant/expired Bearer not being required for success, same-family fixed absolute expiry, current role claims, rejection of unknown/malformed/expired/revoked credentials, and persistence unavailability producing generic 503 ProblemDetails with no replacement cookie in `tests/Authentication.IntegrationTests/Scenarios/RefreshRotationTests.cs`.
-- [ ] T022 [P] [US2] Add deterministic `ControlledTimeProvider` scenarios proving expired, disabled, and Identity-locked users receive the same generic 401 refresh contract with no replacement cookie in `tests/Authentication.IntegrationTests/Scenarios/RefreshCredentialFailureTests.cs`.
-- [ ] T023 [P] [US2] Add Origin-boundary integration scenarios proving missing, malformed, opaque, and mismatched Origin values return 403 before credential processing and the exact configured origin succeeds in `tests/Authentication.IntegrationTests/Scenarios/RefreshOriginProtectionTests.cs`.
+- [X] T021 [P] [US2] Add refresh integration scenarios for valid rotation without an `Authorization` header, an irrelevant/expired Bearer not being required for success, same-family fixed absolute expiry, current role claims, rejection of unknown/malformed/expired/revoked credentials, and persistence unavailability producing generic 503 ProblemDetails with no replacement cookie in `tests/Authentication.IntegrationTests/Scenarios/RefreshRotationTests.cs`.
+- [X] T022 [P] [US2] Add deterministic `ControlledTimeProvider` scenarios proving expired, disabled, and Identity-locked users receive the same generic 401 refresh contract with no replacement cookie in `tests/Authentication.IntegrationTests/Scenarios/RefreshCredentialFailureTests.cs`.
+- [X] T023 [P] [US2] Add Origin-boundary integration scenarios proving missing, malformed, opaque, and mismatched Origin values return 403 before credential processing and the exact configured origin succeeds in `tests/Authentication.IntegrationTests/Scenarios/RefreshOriginProtectionTests.cs`.
 
 ### Implementation for User Story 2
 
-- [ ] T024 [US2] Add refresh orchestration under `src/Authentication.Application/Features/Sessions/`: keep `RefreshSessionHandler` in `RefreshSessionHandler.cs`, and its command and outcome as one top-level type per matching file; preserve generic unusable-credential outcomes and issue existing access-token claims only after successful rotation.
-- [ ] T025 [US2] Implement serialized SQLite refresh consumption: verify family, credential, and current Identity state; consume exactly one current credential; create exactly one same-family replacement; and commit before return in `src/Authentication.Infrastructure/Sessions/RenewableSessionStore.cs`.
-- [ ] T026 [US2] Add exact configured-Origin validation with generic 403 failure and no CORS enablement in `src/Authentication.Api/Features/Sessions/BrowserOriginValidator.cs`.
-- [ ] T027 [US2] Add anonymous `POST /api/auth/refresh` mapping that requires no access JWT, validates Origin before cookie processing, maps every unusable credential state to generic 401 ProblemDetails, maps persistence unavailability to generic 503 ProblemDetails, and emits the replacement cookie and existing access-token response only on success in `src/Authentication.Api/Features/Sessions/RefreshEndpoint.cs`.
-- [ ] T028 [US2] Register the refresh-session endpoint group and its API-boundary collaborators in `src/Authentication.Api/Program.cs`.
+- [X] T024 [US2] Add refresh orchestration under `src/Authentication.Application/Features/Sessions/`: keep `RefreshSessionHandler` in `RefreshSessionHandler.cs`, and its command and outcome as one top-level type per matching file; preserve generic unusable-credential outcomes and issue existing access-token claims only after successful rotation.
+- [X] T025 [US2] Implement serialized SQLite refresh consumption: verify family, credential, and current Identity state; consume exactly one current credential; create exactly one same-family replacement; and commit before return in `src/Authentication.Infrastructure/Sessions/RenewableSessionStore.cs`.
+- [X] T026 [US2] Add exact configured-Origin validation with generic 403 failure and no CORS enablement in `src/Authentication.Api/Features/Sessions/BrowserOriginValidator.cs`.
+- [X] T027 [US2] Add anonymous `POST /api/auth/refresh` mapping that requires no access JWT, validates Origin before cookie processing, maps every unusable credential state to generic 401 ProblemDetails, maps persistence unavailability to generic 503 ProblemDetails, and emits the replacement cookie and existing access-token response only on success in `src/Authentication.Api/Features/Sessions/RefreshEndpoint.cs`.
+- [X] T028 [US2] Register the refresh-session endpoint group and its API-boundary collaborators in `src/Authentication.Api/Program.cs`.
 
 **Checkpoint**: US2 provides the normal renewable-session path without exposing refresh material in
 JSON or extending family expiry.

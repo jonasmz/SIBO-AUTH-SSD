@@ -9,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddProblemDetails();
 builder.Services.AddAuthenticationInfrastructure(builder.Configuration);
 builder.Services.AddSingleton<RefreshCookieWriter>();
+builder.Services.AddSingleton<BrowserOriginValidator>();
 
 var app = builder.Build();
 
@@ -20,6 +21,7 @@ await app.Services.InitializeAuthenticationInfrastructureAsync();
 
 app.MapHealthEndpoints();
 app.MapLoginEndpoint();
+app.MapRefreshEndpoint();
 app.MapAdministrationEndpoints();
 
 await app.RunAsync();

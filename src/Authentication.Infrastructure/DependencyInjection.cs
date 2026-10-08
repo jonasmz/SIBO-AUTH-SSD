@@ -50,6 +50,7 @@ public static class DependencyInjection
         services.AddSingleton(Options.Create(refreshOptions));
         services.AddSingleton<RefreshCredentialProtector>();
         services.AddScoped<IRenewableSessionStore, RenewableSessionStore>();
+        services.AddScoped<IRefreshSessionRotation, RenewableSessionStore>();
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<InitializationState>();
         services.AddSingleton<DatabaseInitializer>();
@@ -60,6 +61,7 @@ public static class DependencyInjection
         services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
         services.AddScoped<IIdentityCredentialValidator, IdentityCredentialValidator>();
         services.AddScoped<LoginHandler>();
+        services.AddScoped<RefreshSessionHandler>();
         services.AddScoped<IUserAdministration, UserAdministration>();
         services.AddScoped<IRoleAdministration, RoleAdministration>();
 
