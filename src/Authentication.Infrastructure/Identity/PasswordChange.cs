@@ -35,7 +35,17 @@ public sealed partial class PasswordChange(
         var changed = await userManager.ChangePasswordAsync(user, command.CurrentPassword, command.NewPassword);
         if (!changed.Succeeded)
         {
-            return Map(changed);
+            var outcome = Map(changed);
+            if (outcome == ChangePasswordOutcome.InvalidCurrentPassword && userManager.SupportsUserLockout)
+            {
+                // An incorrect current password is a failed password attempt like a failed login
+                // (SRS NFR-SEC-BF-001): Identity counts it and applies its configured lockout. Only
+                // that counter is committed; the credential and every session stay unchanged.
+                await userManager.AccessFailedAsync(user);
+                await transaction.CommitAsync(cancellationToken);
+            }
+
+            return outcome;
         }
 
         var families = await context.RenewableSessionFamilies
