@@ -52,19 +52,19 @@ description: "Executable task list for Phase 1 — Bootstrap, Identity, Admin, L
 
 ### Tests for User Story 1
 
-- [ ] T009 [US1] Write the failing consolidated startup, migration, bootstrap, and health scenario in tests/Authentication.IntegrationTests/Scenarios/BootstrapAndHealthTests.cs, covering empty file-backed SQLite startup, exactly one initial role/user, safe live/ready responses, and initialization failure with no secret leakage.
+- [ ] T009 [US1] Write the failing consolidated startup, migration, bootstrap, and health scenario in tests/Authentication.IntegrationTests/Scenarios/BootstrapAndHealthTests.cs, covering empty file-backed SQLite startup, exactly one initial role/user, safe live/ready responses, and initialization failure that terminates startup before readiness or normal traffic without leaking secrets.
 
 ### Implementation for User Story 1
 
 - [ ] T010 [US1] Implement the Identity EF Core persistence model in src/Authentication.Infrastructure/Persistence/AuthenticationDbContext.cs using native IdentityUser<string> and IdentityRole<string>; enforce the data-model constraint that NormalizedEmail has a database-enforced unique index and keep Identity password/stamp/lockout fields framework-owned.
 - [ ] T011 [US1] Generate and version the initial Identity SQLite migration under src/Authentication.Infrastructure/Persistence/Migrations/, ensuring it creates only Identity storage and EF migration history, not refresh, session, recovery, or future administrative tables.
-- [ ] T012 [US1] Implement startup migration and first-time Identity bootstrap in src/Authentication.Infrastructure/Persistence/DatabaseInitializer.cs: apply pending migrations internally, create Administrator, then create UserName=admin / Email=admin@local.invalid / password admin through Identity and assign the role; configure Identity's externally configurable Phase 1 password policy so the explicit initial password is permitted without custom hashing.
+- [ ] T012 [US1] Implement startup migration and first-time Identity bootstrap in src/Authentication.Infrastructure/Persistence/DatabaseInitializer.cs: apply pending migrations internally; use fixed reserved IDs and one transaction to create Administrator, then create UserName=admin / Email=admin@local.invalid / password admin through Identity and assign the role; roll back an interrupted or failed first bootstrap so a later startup can retry consistently; configure Identity's externally configurable Phase 1 password policy so the explicit initial password is permitted without custom hashing.
 - [ ] T013 [US1] Implement SQLite availability probing in src/Authentication.Infrastructure/Health/SqliteHealthCheck.cs and wire initialization completion/failure into readiness without exposing database, Identity, key, or configuration detail.
 - [ ] T014 [US1] Implement GET /health/live and GET /health/ready plus the exact { "status": "healthy" } success DTO in src/Authentication.Api/Features/Health/HealthEndpoints.cs and src/Authentication.Api/Features/Health/HealthStatusResponse.cs; return safe ProblemDetails for unavailable readiness.
 - [ ] T015 [US1] Invoke initialization before normal traffic and mount the health feature in src/Authentication.Api/Program.cs, ensuring migration/bootstrap configuration failures terminate startup rather than expose a ready service.
-- [ ] T016 [P] [US1] Create the non-root multi-stage runtime image in src/Authentication.Api/Dockerfile and the Phase 1 Compose service in compose.yml; use only Auth API, pass external configuration, mount the configurable SQLite host directory, omit migration/bootstrap services and dotnet ef database update, and do not embed secrets.
+- [ ] T016 [P] [US1] Create the non-root multi-stage runtime image in src/Authentication.Api/Dockerfile using the Technical Constraints-authorized official `mcr.microsoft.com/dotnet/sdk:10.0` and `mcr.microsoft.com/dotnet/aspnet:10.0` development tags, plus the Phase 1 Compose service in compose.yml; use only Auth API, pass external configuration, mount the configurable SQLite host directory, omit migration/bootstrap services and dotnet ef database update, and do not embed secrets; exact production tag/digest recording remains a production-release obligation.
 - [ ] T017 [P] [US1] Add the Phase 1 external configuration example and persistent-storage instructions in .env.example and docs/phase-1-operations.md, including externally supplied RSA path, SQLite bind mount, restricted permissions, and the warning that admin must be replaced after first access without implementing password change.
-- [ ] T018 [US1] Make tests/Authentication.IntegrationTests/Scenarios/BootstrapAndHealthTests.cs pass against the startup and health slice, including migration failure/readiness evidence and safe public diagnostics.
+- [ ] T018 [US1] Make tests/Authentication.IntegrationTests/Scenarios/BootstrapAndHealthTests.cs pass against the startup and health slice, including evidence that migration/bootstrap failure terminates startup before readiness, plus safe public diagnostics for a running service whose database later becomes unavailable.
 
 **Checkpoint**: From empty disposable storage, the API starts without an external migration or bootstrap step, has initial Identity state, and provides safe liveness/readiness.
 
@@ -78,7 +78,7 @@ description: "Executable task list for Phase 1 — Bootstrap, Identity, Admin, L
 
 ### Tests for User Story 2
 
-- [ ] T019 [US2] Write the failing consolidated login/JWT scenario in tests/Authentication.IntegrationTests/Scenarios/LoginAndJwtTests.cs, covering success, identical generic unknown-email and wrong-password 401 ProblemDetails, Identity failed-attempt accounting, RS256 verification, required claims, UTC iat/exp, unique jti, stable sub, matching expiry response, and default/configured lifetime.
+- [ ] T019 [US2] Write the failing consolidated login/JWT issuance scenario in tests/Authentication.IntegrationTests/Scenarios/LoginAndJwtTests.cs, covering success, identical generic unknown-email and wrong-password 401 ProblemDetails, Identity failed-attempt accounting, RS256 signature and claim inspection as an issuance oracle, UTC iat/exp, unique jti, stable sub, matching expiry response, and default/configured lifetime; do not introduce consumer JWT Bearer validation or clock-tolerance configuration assigned to Phase 2.
 
 ### Implementation for User Story 2
 
@@ -105,7 +105,7 @@ description: "Executable task list for Phase 1 — Bootstrap, Identity, Admin, L
 
 ### Implementation for User Story 3
 
-- [ ] T027 [US3] Harden bootstrap idempotence in src/Authentication.Infrastructure/Persistence/DatabaseInitializer.cs by using fixed reserved IDs and one transaction for first creation; after the built-in user exists, perform no mutation of email, password, role assignments, stamps, lockout state, or any other fields, and roll back failed first bootstrap.
+- [ ] T027 [US3] Complete lifecycle-preservation behavior in src/Authentication.Infrastructure/Persistence/DatabaseInitializer.cs: after the built-in user created by T012 exists, perform no mutation of email, password, role assignments, stamps, lockout state, or any other fields; repeated initialization must neither duplicate the fixed-ID user/role nor overwrite established state.
 - [ ] T028 [US3] Finalize durable mount and file-permission handling in compose.yml, src/Authentication.Api/Dockerfile, and docs/phase-1-operations.md: SQLite/private PEM must be host bind mounts or explicitly external volume, the key mount read-only where supported, writable state available to the non-root process, and neither asset dependent on a Compose-managed named volume.
 - [ ] T029 [US3] Make tests/Authentication.IntegrationTests/Scenarios/BootstrapLifecycleTests.cs pass with temporary SQLite files and the same RSA pair, proving bootstrap preserves changed state and does not recreate or overwrite it.
 - [ ] T030 [US3] Create the disposable Compose lifecycle demonstration in tests/acceptance/phase-1.sh, using an explicit external temporary state directory to prove empty startup, restart, docker compose down -v survival of SQLite/private key, stable key fingerprint, and successful ready/login behavior without future services.
@@ -120,9 +120,9 @@ description: "Executable task list for Phase 1 — Bootstrap, Identity, Admin, L
 
 - [ ] T031 [P] Reconcile configuration and operational instructions with delivered behavior in .env.example, docs/phase-1-operations.md, and specs/001-phase-1-bootstrap-identity-login-jwt/quickstart.md; retain the explicit first-access password-replacement warning and exclude Phase 2-8 workflows.
 - [ ] T032 Run dotnet build Authentication.slnx and dotnet test Authentication.slnx, correcting all first-party compiler/analyzer warnings and current-phase regressions in the relevant src/ or tests/ file rather than suppressing them globally.
-- [ ] T033 Run tests/acceptance/phase-1.sh and the quickstart.md G1 procedure against disposable external storage; record build, tests, startup, migration/bootstrap, login/JWT, health, restart, and down -v evidence in docs/phase-1-operations.md without modifying normative files under baseline/.
-- [ ] T034 Inspect src/, compose.yml, .env.example, src/Authentication.Api/Dockerfile, and tests/ for Phase 1 governance compliance: no secrets in tracked files/logs/responses, no forbidden dependencies or EF Core InMemory persistence tests, no external migration/bootstrap process, no future endpoints/entities/ports, and no unauthorized service or volume.
-- [ ] T035 Update Phase 1 completion evidence in specs/001-phase-1-bootstrap-identity-login-jwt/checklists/requirements.md and create the identifiable Gate G1 closing commit only after T032-T034 pass; do not mark the roadmap or any baseline/ document as changed by implementation.
+- [ ] T033 Run tests/acceptance/phase-1.sh and the quickstart.md G1 procedure against disposable external storage; record build, tests, successful startup, failed-initialization/no-readiness, migration/bootstrap, login/JWT issuance, health, restart, and down -v evidence in docs/phase-1-operations.md without modifying normative files under baseline/.
+- [ ] T034 Inspect src/, compose.yml, .env.example, src/Authentication.Api/Dockerfile, and tests/ for Phase 1 governance compliance: no secrets in tracked files/logs/responses, no forbidden dependencies or EF Core InMemory persistence tests, no external migration/bootstrap process, no future endpoints/entities/ports, no runtime OpenAPI/Scalar or consumer JWT validation introduced before their roadmap phases, only the Technical Constraints-authorized official .NET 10.0 development image tags, and no unauthorized service or volume.
+- [ ] T035 After T032-T034 pass, update the unchecked Gate G1 closure section in specs/001-phase-1-bootstrap-identity-login-jwt/checklists/requirements.md with the verified outcome, evidence references, explicit G1 approval, and identifiable closing commit; do not claim approval before verification, create a new decision record when no roadmap-altering decision occurred, or modify any normative file under baseline/.
 
 ---
 
@@ -146,7 +146,8 @@ description: "Executable task list for Phase 1 — Bootstrap, Identity, Admin, L
 ### Parallel Opportunities
 
 - T016 and T017 can proceed in parallel after Setup project paths exist.
-- T020 and T021 can proceed in parallel after the Foundational phase.
+- After US1 is complete, T020 and T021 can proceed in parallel within US2 because they touch
+  independent Application and Api contract files.
 - T031 can proceed in parallel with final code review once configuration paths are stable.
 - Tasks marked [P] touch distinct files; all other tasks preserve listed dependencies.
 

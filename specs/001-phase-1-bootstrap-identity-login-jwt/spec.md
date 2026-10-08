@@ -28,8 +28,8 @@ found through the supported authentication flow.
 1. **Given** empty configured persistent storage and valid external configuration, **When** an
    operator starts the service through Docker Compose, **Then** the database is prepared,
    `Administrator` and the initial administrator are present, and readiness reports healthy.
-2. **Given** a database initialization failure, **When** the service starts, **Then** it does
-   not report readiness and does not accept normal ready-state operation.
+2. **Given** a database initialization failure, **When** startup is attempted, **Then** startup
+   fails before normal traffic is accepted and the service never announces readiness.
 3. **Given** the service process is running, **When** a liveness check is requested, **Then**
    it reports process health without disclosing sensitive details.
 
@@ -88,8 +88,10 @@ material survive `docker compose down -v` because they reside outside Compose-ma
   startup.
 - A missing or inaccessible RSA private key prevents successful token issuance and must not be
   exposed in responses or logs.
-- Existing, incorrect, unknown, disabled, or locked credentials receive the externally generic
-  login outcome required for the active behavior; the feature does not expose account existence.
+- Existing credentials with an incorrect password, unknown credentials, and applicable built-in
+  Identity lockout states receive the same externally generic login outcome; the feature does not
+  expose account existence. A distinct disabled-user state and its enforcement begin with the
+  Phase 3 administrative capability that can create that state.
 - The initial administrator's weak first-access password is identified for replacement after
   first access, but password change is not provided by this phase.
 
@@ -174,6 +176,11 @@ This feature MUST NOT introduce:
   infrastructure.
 - Data Protection persistence, final four-service deployment integration, backup/restore, or
   final operational acceptance work assigned to later phases.
+- Consumer-API JWT validation and its explicit clock-tolerance policy, assigned to Phase 2.
+- Runtime-generated OpenAPI/Scalar publication and final contract review, assigned to Phase 8;
+  the Phase 1 design contract remains the source for its three current endpoint contracts.
+- Production-release image pinning and digest recording; Phase 1 uses the Technical Constraints'
+  permitted development image tags for its development and acceptance Compose artifact.
 - Speculative abstractions, persistence structures, contracts, mocks, or placeholders intended
   solely for later phases.
 
@@ -210,7 +217,9 @@ because the roadmap defines implementation sequencing.
   initial administrator or role; the externally stored SQLite data and RSA private signing
   material also remain present after `docker compose down -v`.
 - **SC-005**: Liveness reports a healthy running process, while readiness reports healthy only
-  after successful database initialization and reports failure when database initialization fails.
+  after successful database initialization. An initialization failure terminates startup before
+  the service can announce readiness; after successful startup, loss of database availability
+  makes readiness report failure.
 - **SC-006**: Gate G1 evidence shows build, focused automated verification, startup, feature
   workflow, and regression checks passing before Phase 1 is marked complete.
 
@@ -223,6 +232,6 @@ because the roadmap defines implementation sequencing.
   Authentication API; the final frontend, API A, and API B integration remains future work.
 - The initial administrator's password-change capability is delivered in Roadmap Phase 5. This
   phase communicates the replacement requirement without implementing that later capability.
-- Account disabling and lockout-related login outcomes honor the SRS generic response contract;
-  administrative controls and full security-hardening configuration are introduced only in their
-  assigned roadmap phases.
+- Applicable built-in Identity lockout outcomes honor the SRS generic response contract. The
+  disabled-user state and enforcement are introduced with Phase 3 administration, while full
+  security-hardening configuration remains assigned to Phase 7.

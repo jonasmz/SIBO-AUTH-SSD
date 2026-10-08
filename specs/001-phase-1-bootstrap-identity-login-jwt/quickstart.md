@@ -150,7 +150,7 @@ install -d -m 0500 "$AUTH_FAILURE_STATE"
 AUTH_SQLITE_HOST_PATH="$AUTH_FAILURE_STATE" docker compose up auth-api
 ```
 
-The service must fail startup or remain non-ready; it must never report successful readiness.
+The service must fail startup before it can report successful readiness or accept normal traffic.
 Diagnostics must identify the initialization class of failure without exposing secrets. Restore
 the original `AUTH_SQLITE_HOST_PATH` before continuing.
 
@@ -166,7 +166,7 @@ Record the following before closing Phase 1:
 | Internal migrations; no external migration/bootstrap stage | PASS |
 | Initial administrator and `Administrator` role | PASS |
 | Email/password login and RS256 JWT | PASS |
-| Liveness/readiness including initialization failure | PASS |
+| Liveness/readiness, including failed-startup evidence for initialization failure | PASS |
 | Restart/recreation without duplicate or overwritten identity | PASS |
 | External SQLite and RSA persistence, including scoped `down -v` | PASS |
 | Regression | PASS |

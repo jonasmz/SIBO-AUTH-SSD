@@ -49,6 +49,14 @@ startup/feature/regression must pass; no future-phase components or unauthorized
 `GET /health/ready`), persists Identity users/roles only, and runs one Authentication API
 container. Business API integration and the final four-service topology are later phases.
 
+**Roadmap boundaries**: The OpenAPI YAML in this feature is a Phase 1 design contract. Runtime
+generation with `Microsoft.AspNetCore.OpenApi`, read-only Scalar publication, and final contract
+review remain assigned to Roadmap Phase 8. Consumer JWT validation—including explicit and
+consistent clock tolerance—remains assigned to Phase 2; Phase 1 only issues tokens with UTC
+`iat`/`exp`. The Phase 1 development/acceptance Dockerfile may use the Technical Constraints'
+authorized official .NET `10.0` development tags; an exact production tag or digest is recorded
+when a production release is validated, not invented by this phase.
+
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-checked after Phase 1 design.*
@@ -80,6 +88,10 @@ Key outcomes:
   readiness returns `503` only when a running initialized service loses database availability.
 - Return a minimal access-token response and identical ProblemDetails for all invalid credential
   states that exist in the current phase.
+- Treat signature/claim inspection in Phase 1 tests as an issuance oracle, not consumer JWT
+  validation; do not configure Phase 2 clock tolerance or JWT Bearer infrastructure here.
+- Keep runtime OpenAPI/Scalar generation and production-release image pinning in their roadmap
+  phases while preserving the Phase 1 design contract and official development image baseline.
 - Defer all dependencies and infrastructure assigned to later roadmap phases.
 
 ## Phase 1: Design and Contracts
@@ -97,10 +109,11 @@ Key outcomes:
 1. Api validates Phase 1 configuration at startup: SQLite location/connection, JWT issuer,
    audience, lifetime, and readable RSA private PEM path.
 2. Infrastructure applies repository-shipped migrations to the one SQLite database.
-3. Infrastructure runs bootstrap inside a database transaction. Fixed stable IDs distinguish
+3. Infrastructure runs first bootstrap inside a database transaction. Fixed stable IDs distinguish
    the built-in administrator and role from mutable email/name values. If the built-in user
    already exists, bootstrap performs no mutations; otherwise it ensures the fixed role, creates
-   the user with Identity, and assigns the role atomically.
+   the user with Identity, and assigns the role atomically. A failed first bootstrap rolls back so
+   the next startup can retry from a consistent state.
 4. The host begins normal request processing only after successful initialization.
 5. The Login slice normalizes the supplied email through Identity, performs Identity password
    verification with failed-attempt accounting, and performs Identity-hasher-equivalent work for
@@ -188,6 +201,7 @@ src/
 │   ├── Persistence/
 │   │   ├── AuthenticationDbContext.cs
 │   │   ├── DatabaseInitializer.cs
+│   │   ├── InitializationState.cs
 │   │   └── Migrations/
 │   ├── Health/
 │   │   └── SqliteHealthCheck.cs
@@ -213,10 +227,11 @@ tests/
 ├── Authentication.IntegrationTests/
 │   ├── Authentication.IntegrationTests.csproj
 │   ├── Infrastructure/
-│   │   └── AuthenticationApiFactory.cs
+│   │   ├── AuthenticationApiFactory.cs
+│   │   └── Phase1TestResources.cs
 │   └── Scenarios/
 │       ├── BootstrapLifecycleTests.cs
-│       ├── HealthLifecycleTests.cs
+│       ├── BootstrapAndHealthTests.cs
 │       └── LoginAndJwtTests.cs
 └── acceptance/
     └── phase-1.sh

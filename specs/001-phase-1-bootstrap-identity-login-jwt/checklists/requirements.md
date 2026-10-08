@@ -37,3 +37,11 @@
   normative baseline. Technical implementation details remain for planning.
 - Refresh-session language in the final-product SRS is explicitly deferred to Roadmap Phase 4;
   this is an implementation-sequencing boundary, not an unresolved contradiction.
+
+## Gate G1 Closure *(complete only after implementation and verification)*
+
+- [ ] T032 build and current regression tests pass without unresolved first-party warnings.
+- [ ] T033 records the disposable Phase 1 startup, workflow, health, restart, and persistence evidence.
+- [ ] T034 governance inspection passes with no secrets, phase leakage, or unauthorized dependencies.
+- [ ] The Roadmap section 7.5 Gate G1 criteria are reviewed against the recorded evidence and G1 is explicitly approved.
+- [ ] The identifiable Gate G1 closing commit is recorded after approval.
