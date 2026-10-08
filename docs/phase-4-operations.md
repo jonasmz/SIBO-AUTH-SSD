@@ -58,4 +58,4 @@ Focused test coverage lives in `tests/Authentication.IntegrationTests/Scenarios/
 `ConsumerValidationTests`). The reusable validation guide remains
 `specs/004-phase-4-refresh-sessions-logout/quickstart.md`.
 
-Gate G4 approval by the project owner is **pending** (task T053).
+Gate G4 was approved by the project owner on 2026-10-08.
