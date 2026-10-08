@@ -44,6 +44,37 @@ public sealed class ConsumerValidationTests
     }
 
     [Fact]
+    public async Task ConsumersKeepAcceptingAnUnexpiredTokenAfterAPasswordReset()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var auth = new AuthenticationApiFactory();
+        using var authClient = auth.CreateClient();
+        using var admin = AdminTestSupport.WithBearer(auth, await AdminTestSupport.AdministratorTokenAsync(authClient, cancellationToken));
+        _ = await AdminTestSupport.CreateUserAsync(admin, "member@example.test", "Passw0rd!", cancellationToken: cancellationToken);
+        var token = await AdminTestSupport.LoginAsync(authClient, "member@example.test", "Passw0rd!", cancellationToken);
+
+        using var apiA = new ReferenceConsumerFactory("api-a", auth.Resources.PublicKeyPem);
+        using var apiB = new ReferenceConsumerFactory("api-b", auth.Resources.PublicKeyPem);
+        using var clientA = apiA.CreateClient();
+        using var clientB = apiB.CreateClient();
+
+        var resetToken = await PasswordResetTests.RequestTokenAsync(auth, authClient, "member@example.test", cancellationToken);
+        using (var reset = await PasswordResetTests.ResetAsync(authClient, "member@example.test", resetToken, "N3w-Secret!", cancellationToken))
+        {
+            Assert.Equal(HttpStatusCode.NoContent, reset.StatusCode);
+        }
+
+        // The access token issued before the reset is still valid locally; neither consumer was changed.
+        foreach (var (client, service) in new[] { (clientA, "api-a"), (clientB, "api-b") })
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, "/api/caller");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using var response = await client.SendAsync(request, cancellationToken);
+            Assert.True(response.StatusCode == HttpStatusCode.OK, $"{service} rejected a pre-reset token");
+        }
+    }
+
+    [Fact]
     public async Task ConsumersKeepAcceptingAnUnexpiredTokenAfterAPasswordChange()
     {
         var cancellationToken = TestContext.Current.CancellationToken;

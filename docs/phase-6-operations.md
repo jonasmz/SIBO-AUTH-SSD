@@ -83,3 +83,47 @@ Neither endpoint needs an access token, session, or `Origin`.
 - **Logging.** `PasswordResetRequested` and `PasswordReset` events carry the user id, UTC time, and
   trace/span ids (and the revoked count for a reset). Tokens, passwords, hashes, security stamps,
   and SMTP values never reach the logs.
+
+## Verification commands
+
+```bash
+dotnet build --no-incremental
+dotnet test                         # unit + integration (real Identity, SQLite and Data Protection)
+tests/acceptance/phase-6.sh         # Compose lifecycle with a disposable SMTP sink; also runs Phase 5, 4, 3, 2 and 1 acceptance
+```
+
+Requires `docker compose`, `openssl`, `curl`, `jq`, and Docker access to pull the pinned mail sink
+image. The sink (`tests/acceptance/compose.mail-sink.yml`, Mailpit pinned by digest) is an
+acceptance-only override loaded through `COMPOSE_FILE`; `compose.yml` never references it. The
+script prepares the key-ring directory as the container user with mode `0700` through a throwaway
+root container, because that directory is private to the container user. The reusable validation
+guide is `specs/006-phase-6-password-recovery-email/quickstart.md`.
+
+## Gate G6 evidence (recorded 2026-10-08)
+
+| State | Evidence | Result |
+|---|---|---|
+| Build | `dotnet build --no-incremental` | PASS, 0 warnings, 0 errors |
+| Tests | `dotnet test` | PASS, 154 of 154 (unit and integration), 0 skipped |
+| Startup | `phase-6.sh`: stack ready on disposable storage and an SMTP sink; ready again after `restart`, `up --force-recreate`, and `down -v` + `up` | PASS |
+| Feature | `phase-6.sh`: identical `204` for existing and unknown addresses, one SMTP delivery to the existing account only, token valid after the lifecycle operations, reset replaces the password, every session revoked, token single-use, secret-free logs with the recovery events | PASS |
+| Regression | `phase-6.sh` finishing with `phase-5.sh` → `phase-4.sh` → `phase-3.sh` → `phase-2.sh` → `phase-1.sh` | PASS (all report ALL PASS) |
+
+Decoupled SMTP and scope boundaries:
+
+- `grep -rn "MailKit\|MimeKit" src/Authentication.Domain src/Authentication.Application --include='*.cs' --include='*.csproj'`
+  returns nothing: MailKit is referenced only by Infrastructure.
+- The only package added is MailKit 4.18.0 (`Directory.Packages.props` and the Infrastructure project).
+- `compose.yml` still defines exactly `auth-api`, `api-a`, and `api-b`; it gained the key-ring bind mount
+  and the `Smtp__*`/`DataProtection__*` settings only.
+- No queue, background sender, retry mechanism, template engine, token store, rate limiter, or
+  distributed cache exists in `src`; no migration was added (`dotnet ef migrations
+  has-pending-model-changes` reports none).
+
+Focused tests live in `tests/Authentication.IntegrationTests/Scenarios/`:
+`PasswordRecoveryConfigurationTests`, `PasswordRecoveryRequestTests`,
+`PasswordRecoveryDeliveryFailureTests`, `PasswordResetTests`, `PasswordResetConcurrencyTests`,
+`PasswordResetSessionRevocationTests`, `PasswordRecoveryRestartTests`, and
+`ConsumerValidationTests`; unit tests are `SmtpOptionsTests` and `SmtpEmailSenderMessageTests`.
+
+Gate G6 approval by the project owner is **pending** (task T042).
