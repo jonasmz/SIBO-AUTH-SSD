@@ -1,0 +1,103 @@
+openapi: 3.1.0
+info:
+  title: Authentication API - Phase 7 Security Hardening Contract Delta
+  version: 7.0.0
+  description: >-
+    Phase 7 adds no operation and changes no request, success response or existing error. It adds
+    one possible response, 429, to the four anonymous sensitive operations below. Requests within
+    the limits receive exactly the Phase 1-6 responses. Every other operation (logout, change
+    password, administration, health) is unchanged and not request-limited by the application.
+    Request and success schemas are those of the Phase 1, 4 and 6 contracts and are referenced, not
+    repeated, here.
+servers:
+  - url: http://localhost:8080
+    description: Local development
+paths:
+  /api/auth/login:
+    post:
+      summary: Sign in (Phase 1 contract) - adds 429
+      description: >-
+        Limited per effective client address by policy `login`. A limited request is rejected before
+        credentials are checked, so it never changes account lockout state. A locked, disabled,
+        unknown or wrong-password sign-in still returns the single Phase 1 401 response.
+      operationId: login
+      security: []
+      responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/auth/refresh:
+    post:
+      summary: Rotate the refresh cookie (Phase 4 contract) - adds 429
+      description: >-
+        Limited per effective client address by policy `refresh`. The 429 is decided before the
+        Origin check and the cookie; no cookie is set or cleared on 429.
+      operationId: refresh
+      security: []
+      responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/auth/forgot-password:
+    post:
+      summary: Request reset instructions (Phase 6 contract) - adds 429
+      description: >-
+        Limited per effective client address by policy `forgot-password` and, after the body is
+        validated, per normalized email address by policy `forgot-password-address`. Both limits
+        count every well-formed request, whether or not an account exists for the address, so 429
+        reveals nothing about account existence. A request rejected with 400 consumes no address
+        allowance.
+      operationId: forgotPassword
+      security: []
+      responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/auth/reset-password:
+    post:
+      summary: Reset a password with a token (Phase 6 contract) - adds 429
+      description: Limited per effective client address by policy `reset-password`.
+      operationId: resetPassword
+      security: []
+      responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+components:
+  headers:
+    RetryAfter:
+      description: >-
+        Whole seconds until the current window allows requests again, when the limiter can tell.
+        Optional; clients must not depend on it.
+      schema:
+        type: integer
+        minimum: 0
+  responses:
+    TooManyRequests:
+      description: >-
+        The applicable limit was exceeded. Same body for every policy and every account; it names no
+        account, token or policy internals.
+      headers:
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: https://tools.ietf.org/html/rfc6585#section-4
+            title: Too Many Requests
+            status: 429
+            detail: Too many requests. Try again later.
+  schemas:
+    ProblemDetails:
+      type: object
+      required: [title, status, detail]
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        traceId:
+          type: string
+      additionalProperties: false

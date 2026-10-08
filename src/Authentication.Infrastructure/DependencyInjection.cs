@@ -21,6 +21,9 @@ namespace Authentication.Infrastructure;
 
 public static class DependencyInjection
 {
+    private const int InitialMaxFailedAccessAttempts = 5;
+    private static readonly TimeSpan InitialLockoutTimeSpan = TimeSpan.FromMinutes(15);
+
     public static IServiceCollection AddAuthenticationInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -55,6 +58,7 @@ public static class DependencyInjection
 
         Validate(jwtOptions, sqliteOptions, refreshOptions);
         ValidateRecoveryInfrastructure(smtpOptions, dataProtectionOptions);
+        ValidateLockoutOverrides(configuration);
 
         services.AddSingleton(Options.Create(jwtOptions));
         services.AddSingleton(Options.Create(sqliteOptions));
@@ -97,6 +101,12 @@ public static class DependencyInjection
                 options.Password.RequireUppercase = false;
                 options.Password.RequireNonAlphanumeric = false;
                 options.Password.RequiredUniqueChars = 1;
+
+                // Initial lockout (SRS NFR-SEC-BF-002/003). Identity's own default span is 5 minutes, so
+                // the 15 are set explicitly; the Identity section bound below can still override both.
+                options.Lockout.MaxFailedAccessAttempts = InitialMaxFailedAccessAttempts;
+                options.Lockout.DefaultLockoutTimeSpan = InitialLockoutTimeSpan;
+                options.Lockout.AllowedForNewUsers = true;
             })
             .AddRoles<IdentityRole<string>>()
             .AddEntityFrameworkStores<AuthenticationDbContext>()
@@ -165,6 +175,19 @@ public static class DependencyInjection
             throw new InvalidOperationException(
                 $"Required configuration '{keySetting}' does not reference a readable private key file.");
         }
+    }
+
+    /// <summary>Fails startup, naming only the setting, when an explicit lockout override is not a positive value.</summary>
+    private static void ValidateLockoutOverrides(IConfiguration configuration)
+    {
+        const string countSetting = "Identity:Lockout:MaxFailedAccessAttempts";
+        const string spanSetting = "Identity:Lockout:DefaultLockoutTimeSpan";
+
+        var count = configuration[countSetting];
+        Require(string.IsNullOrWhiteSpace(count) || (int.TryParse(count, out var attempts) && attempts >= 1), countSetting);
+
+        var span = configuration[spanSetting];
+        Require(string.IsNullOrWhiteSpace(span) || (TimeSpan.TryParse(span, out var lockout) && lockout > TimeSpan.Zero), spanSetting);
     }
 
     private static void ValidateRecoveryInfrastructure(SmtpOptions smtpOptions, DataProtectionStorageOptions dataProtectionOptions)

@@ -1,0 +1,29 @@
+# Acceptance-only override: runs the reference first-layer proxy (docs/reference-proxy/nginx.conf) in front
+# of auth-api inside a disposable project. It is never referenced by compose.yml and adds no service to the
+# deployment topology. Used through COMPOSE_FILE by tests/acceptance/phase-7.sh.
+# Paths are relative to the first file (compose.yml), i.e. the repository root.
+services:
+  reference-proxy:
+    # Official image, pinned by tag and digest (nginx 1.30.5, published 2026-09-22).
+    image: nginx:stable-alpine@sha256:0985e772fb9f729e6fa0980da05fca5d9c468e870eed43071545afa9d2e27d94
+    volumes:
+      - type: bind
+        source: ./docs/reference-proxy/nginx.conf
+        target: /etc/nginx/conf.d/default.conf
+        read_only: true
+    ports:
+      - "${REFERENCE_PROXY_HTTP_PORT:-18090}:80"
+    networks:
+      default:
+        ipv4_address: 172.28.7.10
+    depends_on:
+      - auth-api
+  auth-api:
+    environment:
+      # The proxy's fixed address is the only trusted source of forwarded headers.
+      ReverseProxy__TrustedProxies: "172.28.7.10"
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.28.7.0/24

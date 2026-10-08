@@ -1,4 +1,5 @@
 using Authentication.Application.Features.PasswordRecovery;
+using Authentication.Infrastructure.Identity;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -20,6 +21,7 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
     private readonly CapturingLoggerProvider _logs = new();
     private readonly TimeSpan? _resetTokenLifespan;
     private readonly bool _useRealEmailSender;
+    private readonly string _environment;
 
     public AuthenticationApiFactory(
         string? connectionStringOverride = null,
@@ -31,8 +33,11 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
         IReadOnlyDictionary<string, string>? additionalSettings = null,
         string? dataProtectionKeysPath = null,
         TimeSpan? resetTokenLifespan = null,
-        bool useRealEmailSender = false)
+        bool useRealEmailSender = false,
+        bool liftRateLimits = true,
+        string environment = "Testing")
     {
+        _environment = environment;
         _resetTokenLifespan = resetTokenLifespan;
         _useRealEmailSender = useRealEmailSender;
         _ownsResources = sharedResources is null;
@@ -55,6 +60,20 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
         SetEnvironmentVariable("Smtp__SenderAddress", "no-reply@auth.test");
         SetEnvironmentVariable("Smtp__SenderName", "Authentication API Tests");
 
+        // Request limits are lifted so unrelated scenarios never meet them; a test that supplies a policy's own
+        // PermitLimit gets exactly that value, and the remaining policies stay lifted.
+        if (liftRateLimits)
+        {
+            foreach (var policy in new[] { "Login", "Refresh", "ForgotPassword", "ResetPassword", "ForgotPasswordAddress" })
+            {
+                var key = $"RateLimiting__{policy}__PermitLimit";
+                if (additionalSettings?.ContainsKey(key) != true)
+                {
+                    SetEnvironmentVariable(key, "10000");
+                }
+            }
+        }
+
         // Extra external settings such as a stricter Identity password policy
         // (for example "Identity__Password__RequiredLength").
         foreach (var (key, value) in additionalSettings ?? new Dictionary<string, string>())
@@ -62,6 +81,9 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
             SetEnvironmentVariable(key, value);
         }
     }
+
+    /// <summary>Counts password verifications performed by the host.</summary>
+    public CountingPasswordHasher PasswordHasher { get; } = new();
 
     /// <summary>Messages the host asked to deliver; empty when the real sender is used.</summary>
     public CapturingEmailSender Emails { get; } = new();
@@ -85,7 +107,7 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Testing");
+        builder.UseEnvironment(_environment);
         builder.ConfigureLogging(logging => logging.AddProvider(_logs));
 
         builder.ConfigureTestServices(services =>
@@ -95,6 +117,10 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
                 services.RemoveAll<TimeProvider>();
                 services.AddSingleton(_timeProvider);
             }
+
+            services.AddSingleton<IStartupFilter, TestConnectionAddressStartupFilter>();
+            services.RemoveAll<IPasswordHasher<ApplicationUser>>();
+            services.AddSingleton<IPasswordHasher<ApplicationUser>>(PasswordHasher);
 
             if (!_useRealEmailSender)
             {

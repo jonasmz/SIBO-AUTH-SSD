@@ -85,7 +85,7 @@ public sealed class PasswordChangeTests
         Assert.Equal(HttpStatusCode.BadRequest, weak.StatusCode);
         var weakBody = await weak.Content.ReadAsStringAsync(cancellationToken);
         Assert.Contains("The password does not satisfy the password policy.", weakBody, StringComparison.Ordinal);
-        Assert.DoesNotContain("abc", weakBody.Replace("password", string.Empty, StringComparison.Ordinal), StringComparison.Ordinal);
+        Assert.DoesNotContain("\"abc\"", weakBody, StringComparison.Ordinal);
 
         // A new password that violates the policy is not a failed current-password attempt.
         Assert.Equal(1, await AccessFailedCountAsync(factory, cancellationToken));

@@ -22,6 +22,22 @@ services:
       Smtp__Password: "${AUTH_SMTP_PASSWORD:-}"
       Smtp__SenderAddress: "${AUTH_SMTP_SENDER_ADDRESS:?set AUTH_SMTP_SENDER_ADDRESS}"
       Smtp__SenderName: "${AUTH_SMTP_SENDER_NAME:?set AUTH_SMTP_SENDER_NAME}"
+      # Phase 7 hardening: every value is optional. The lockout defaults are repeated here because the
+      # Identity binder rejects an empty TimeSpan; blank request-limit and proxy values keep their defaults.
+      Identity__Lockout__MaxFailedAccessAttempts: "${AUTH_LOCKOUT_MAX_FAILED_ATTEMPTS:-5}"
+      Identity__Lockout__DefaultLockoutTimeSpan: "${AUTH_LOCKOUT_DURATION:-00:15:00}"
+      RateLimiting__Login__PermitLimit: "${AUTH_RATE_LIMIT_LOGIN_PERMIT_LIMIT:-}"
+      RateLimiting__Login__WindowSeconds: "${AUTH_RATE_LIMIT_LOGIN_WINDOW_SECONDS:-}"
+      RateLimiting__Refresh__PermitLimit: "${AUTH_RATE_LIMIT_REFRESH_PERMIT_LIMIT:-}"
+      RateLimiting__Refresh__WindowSeconds: "${AUTH_RATE_LIMIT_REFRESH_WINDOW_SECONDS:-}"
+      RateLimiting__ForgotPassword__PermitLimit: "${AUTH_RATE_LIMIT_FORGOT_PASSWORD_PERMIT_LIMIT:-}"
+      RateLimiting__ForgotPassword__WindowSeconds: "${AUTH_RATE_LIMIT_FORGOT_PASSWORD_WINDOW_SECONDS:-}"
+      RateLimiting__ResetPassword__PermitLimit: "${AUTH_RATE_LIMIT_RESET_PASSWORD_PERMIT_LIMIT:-}"
+      RateLimiting__ResetPassword__WindowSeconds: "${AUTH_RATE_LIMIT_RESET_PASSWORD_WINDOW_SECONDS:-}"
+      RateLimiting__ForgotPasswordAddress__PermitLimit: "${AUTH_RATE_LIMIT_FORGOT_PASSWORD_ADDRESS_PERMIT_LIMIT:-}"
+      RateLimiting__ForgotPasswordAddress__WindowSeconds: "${AUTH_RATE_LIMIT_FORGOT_PASSWORD_ADDRESS_WINDOW_SECONDS:-}"
+      ReverseProxy__TrustedProxies: "${AUTH_TRUSTED_PROXIES:-}"
+      ReverseProxy__TrustedNetworks: "${AUTH_TRUSTED_NETWORKS:-}"
     volumes:
       - type: bind
         source: ${AUTH_SQLITE_HOST_PATH:?set AUTH_SQLITE_HOST_PATH}

@@ -229,7 +229,7 @@ Una fase sólo podrá marcarse `[x]` cuando se hayan cumplido todos sus criterio
 | 4 | Refresh tokens + sesiones + logout | `[x]` | Phase 1-3 | `G4` |
 | 5 | Cambio de contraseña | `[x]` | Phase 1-4 | `G5` |
 | 6 | Recuperación de contraseña + email | `[x]` | Phase 1-5 | `G6` |
-| 7 | Security hardening | `[ ]` | Phase 1-6 | `G7` |
+| 7 | Security hardening | `[x]` | Phase 1-6 | `G7` |
 | 8 | Operación + integración + validación final | `[ ]` | Phase 1-7 | `G8` |
 
 ---
@@ -1473,7 +1473,7 @@ Actualizar esta sección al finalizar cada sesión relevante.
 | 2026-10-08 | Phase 4 | Complete — G4 approved | Sesiones renovables en Authentication API: cookie `auth_refresh` (HttpOnly, SameSite=Strict, Secure en producción) emitida en login, `POST /api/auth/refresh` con rotación en la misma familia y expiración absoluta fija, detección de replay con revocación de la familia, consumo concurrente de una sola credencial, `POST /api/auth/logout` idempotente, `POST /api/admin/users/{id}/revoke-sessions`, revocación de todas las familias al deshabilitar, validación exacta de Origin y estado en SQLite con migración al arrancar; sin blacklist de JWT | Build 0 warnings; 104/104 tests; `tests/acceptance/phase-4.sh` ALL PASS (incluye regresión `phase-3.sh`, `phase-2.sh` y `phase-1.sh`) | Commit de cierre `[Phase 4] Close Gate G4` | Aprobación explícita de G4 por el responsable del proyecto el 2026-10-08; evidencia en `docs/phase-4-operations.md`; revisión de convergencia sin hallazgos pendientes; nueva configuración requerida `Security:FrontendOrigin` (`AUTH_FRONTEND_ORIGIN`) y opcional `RefreshSession:LifetimeDays` (7 por defecto); rate limiting de refresh diferido a Phase 7 |
 | 2026-10-08 | Phase 5 | Complete — G5 approved | `POST /api/auth/change-password` para cualquier usuario autenticado sobre su propia cuenta (cuenta tomada sólo del `sub`): verificación de la password actual, política y actualización mediante Identity (`ChangePasswordAsync`), revocación atómica (misma transacción) de las demás familias renovables con motivo `PasswordChanged` conservando la familia de la cookie `auth_refresh` utilizable del mismo usuario (sin cookie utilizable se revocan todas), el administrador inicial `admin/admin` puede retirar su credencial sin email y el nuevo secreto sobrevive al restart; sin blacklist de JWT, sin migración ni infraestructura de email | Build 0 warnings; 115/115 tests; `tests/acceptance/phase-5.sh` ALL PASS (incluye regresión `phase-4.sh`, `phase-3.sh`, `phase-2.sh` y `phase-1.sh`) | Commit de cierre `[Phase 5] Close Gate G5` | Aprobación explícita de G5 por el responsable del proyecto el 2026-10-08; evidencia en `docs/phase-5-operations.md`; revisión de convergencia sin hallazgos; sin configuración nueva; un fallo de password actual no cuenta para el lockout y el rate limiting de este endpoint queda para Phase 7 |
 | 2026-10-08 | Phase 6 | Complete — G6 approved | `POST /api/auth/forgot-password` anónimo con respuesta genérica idéntica (`204`) para cuentas existentes, inexistentes y deshabilitadas, incluso ante fallo de envío o de emisión del token; token de restablecimiento emitido y validado por Identity (`DataProtectorTokenProvider`, temporal, de un solo uso por rotación del security stamp, sin almacén de tokens) y entregado por correo mediante el puerto `IEmailSender` con adaptador SMTP MailKit sólo en Infrastructure; `POST /api/auth/reset-password` anónimo con un único `401` para token inválido/alterado/vencido/usado, email desconocido o cuenta deshabilitada, y revocación atómica (misma transacción) de todas las familias renovables con motivo `PasswordReset`; key ring de Data Protection persistido en bind mount del host fuera del ciclo de vida de Compose (sobrevive a restart, recreación y `down -v`); sin blacklist de JWT ni migración | Build 0 warnings; 157/157 tests; `tests/acceptance/phase-6.sh` ALL PASS (incluye regresión `phase-5.sh`, `phase-4.sh`, `phase-3.sh`, `phase-2.sh` y `phase-1.sh`) | Commit de cierre `[Phase 6] Close Gate G6` | Aprobación explícita de G6 por el responsable del proyecto el 2026-10-08; evidencia en `docs/phase-6-operations.md`; revisión de convergencia sin hallazgos; nueva configuración requerida `Smtp:*` (`AUTH_SMTP_*`) y `DataProtection:KeysPath` (`AUTH_DATAPROTECTION_HOST_PATH`); único paquete nuevo MailKit 4.18.0; el sumidero SMTP Mailpit existe sólo en el override de aceptación; rate limiting de forgot/reset (SRS NFR-SEC-BF-006..009) queda para Phase 7 |
-| — | Phase 7 | Pending | — | — | — | — |
+| 2026-10-08 | Phase 7 | Complete — G7 approved | Endurecimiento transversal sin nuevos endpoints ni cambios de contrato: lockout de Identity con valores iniciales explícitos (5 fallos, 15 minutos) configurables externamente; rate limiting de aplicación con políticas independientes de ventana fija por IP efectiva para login, refresh, forgot-password y reset-password (middleware del framework, contadores sólo en memoria) y límite adicional por email normalizado en forgot-password, todos con `429` ProblemDetails y `Retry-After`; forwarded headers (`X-Forwarded-For`/`X-Forwarded-Proto`) honrados sólo desde proxies o redes configurados explícitamente y desactivados por completo sin configuración; eventos estructurados `LoginFailed` (causa real), `AccountLockedOut` y `RateLimitApplied` sin secretos; cookie, origen/CSRF, ausencia de CORS y anti-enumeración verificados sin cambios; configuración de referencia de Nginx (primera capa de limitación y cabeceras sobrescritas) verificada en un proxy desechable sólo de aceptación | Build 0 warnings; 181/181 tests; `tests/acceptance/phase-7.sh` ALL PASS (incluye regresión `phase-6.sh`, `phase-5.sh`, `phase-4.sh`, `phase-3.sh`, `phase-2.sh` y `phase-1.sh`) | Commit de cierre `[Phase 7] Close Gate G7` | Aprobación explícita de G7 por el responsable del proyecto el 2026-10-08; evidencia en `docs/phase-7-operations.md`; revisión de convergencia sin hallazgos; sin paquetes nuevos ni migración; nueva configuración opcional `Identity:Lockout:*` (`AUTH_LOCKOUT_*`), `RateLimiting:*` (`AUTH_RATE_LIMIT_*`) y `ReverseProxy:*` (`AUTH_TRUSTED_PROXIES`/`AUTH_TRUSTED_NETWORKS`); valores por defecto de los límites como decisión de proyecto documentada; el proxy de referencia existe sólo en el override de aceptación y `compose.yml` mantiene `auth-api`, `api-a` y `api-b`; despliegue productivo del proxy, TLS y logging persistente quedan para Phase 8 |
 | — | Phase 8 | Pending | — | — | — | — |
 
 ---
@@ -1659,8 +1659,9 @@ Phase 3: COMPLETE (Gate G3 approved 2026-10-08)
 Phase 4: COMPLETE (Gate G4 approved 2026-10-08)
 Phase 5: COMPLETE (Gate G5 approved 2026-10-08)
 Phase 6: COMPLETE (Gate G6 approved 2026-10-08)
-Current phase: Phase 7
-Current gate: G7
+Phase 7: COMPLETE (Gate G7 approved 2026-10-08)
+Current phase: Phase 8
+Current gate: G8
 ```
 
 ## Próxima acción
@@ -1668,8 +1669,8 @@ Current gate: G7
 Preparar la especificación Spec-Kit correspondiente a:
 
 ```text
-Phase 7
-Security hardening
+Phase 8
+Operación, integración y validación final
 ```
 
-asegurando que `spec.md`, `plan.md` y `tasks.md` no incorporen el cierre operativo, la integración final ni otras capacidades pertenecientes a Phase 8.
+asegurando que `spec.md`, `plan.md` y `tasks.md` se limiten al cierre operativo, la integración y la validación final, sin incorporar nuevas capacidades funcionales; cualquier funcionalidad faltante de fases anteriores deberá corregirse en su fase conceptual.

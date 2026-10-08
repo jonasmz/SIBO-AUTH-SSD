@@ -1,3 +1,4 @@
+using Authentication.Api.Security;
 using System.Data.Common;
 using Authentication.Application.Features.Sessions;
 using Authentication.Infrastructure.Persistence;
@@ -10,7 +11,7 @@ public static class RefreshEndpoint
 {
     public static IEndpointRouteBuilder MapRefreshEndpoint(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/auth/refresh", HandleAsync).AllowAnonymous();
+        endpoints.MapPost("/api/auth/refresh", HandleAsync).AllowAnonymous().RequireRateLimiting(RateLimitingRegistration.Refresh);
         return endpoints;
     }
 
