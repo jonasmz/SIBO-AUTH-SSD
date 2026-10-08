@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -34,7 +34,8 @@
 - Validation pass 1: all items pass except the intentional open marker. The two endpoint paths are
   the required public contracts; no class, schema, library, or storage technique is prescribed
   (MailKit, the key-ring location, and the token provider belong to planning).
-- One genuine ambiguity (FR-014): what the forgot-password caller observes when delivery fails for
-  an existing account. Resolve with `/speckit-clarify` before planning.
+- Clarification session 2026-10-08 resolved the one genuine ambiguity: a delivery failure for an
+  existing account is only logged; the forgot-password response stays generic (FR-014, US1
+  scenario 6).
 - Gate G5 is closed in the roadmap; no dependency blocks this phase. The rate-limiting timing
   conflict (SRS NFR-SEC-BF-006..009 vs roadmap Phase 7) is recorded as a phase-boundary note.

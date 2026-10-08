@@ -5,6 +5,12 @@
 **Status**: Draft  
 **Input**: Phase 6 — Password Recovery, Reset and Email
 
+## Clarifications
+
+### Session 2026-10-08
+
+- Q: What must the caller of forgot-password observe when email delivery fails for an existing account? → A: The same generic success response as in every other case; the failure is only recorded in the log, without the reset token or SMTP secrets.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Password Recovery Request (Priority: P1)
@@ -36,6 +42,9 @@ response or log contains the reset token.
 5. **Given** a missing, blank, or malformed request, **When** recovery is requested, **Then** it is
    rejected with the established invalid-request convention, independent of whether any account
    exists.
+6. **Given** an existing, enabled account whose recovery email cannot be delivered, **When**
+   recovery is requested, **Then** the external response is still equivalent to scenario 1, and the
+   failure is recorded only in the log without the reset token or SMTP secrets.
 
 ---
 
@@ -127,7 +136,8 @@ Compose project's resources, and verify the token still resets the password.
 - A reset token is single-purpose: it cannot authenticate, cannot be used as an access or refresh
   credential, and cannot be used on a different account.
 - An email delivery failure never exposes the reset token or SMTP secrets in a response or a log,
-  and is recorded with safe diagnostic information.
+  is recorded with safe diagnostic information, and is not visible to the caller of
+  forgot-password.
 - Two simultaneous resets with the same token produce at most one success.
 - A persistence failure during reset yields the established service-unavailable convention and
   leaves the password and sessions unchanged.
@@ -175,10 +185,9 @@ Compose project's resources, and verify the token still resets the password.
   authentication credentials, sender address, and sender display name; credentials MUST come from
   external configuration and never from the image.
 - **FR-014**: An email delivery failure MUST be recorded with safe diagnostic information and MUST
-  NOT record the reset token or SMTP secrets. [NEEDS CLARIFICATION: what must the caller of
-  forgot-password observe when delivery fails for an existing account? Reporting the failure
-  would reveal that the account exists, while hiding it keeps the response equivalent but gives the
-  user no signal. The baseline requires only that the failure be logged without the token.]
+  NOT record the reset token or SMTP secrets. The caller of forgot-password MUST NOT observe the
+  failure: the response stays the same generic response as in every other case, so delivery
+  problems never reveal that an account exists.
 - **FR-015**: Persistent Data Protection key material MUST be stored outside the container's
   ephemeral layer, in a location configurable externally and independent of the Compose project
   lifecycle, so that a restart, rebuild, container recreation, or `docker compose down -v` does not
