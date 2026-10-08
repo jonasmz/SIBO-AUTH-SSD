@@ -10,5 +10,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Authentication.Api/Authentication.Api.csproj" />
+    <ProjectReference Include="../../src/ReferenceConsumer.Api/ReferenceConsumer.Api.csproj" />
   </ItemGroup>
 </Project>
