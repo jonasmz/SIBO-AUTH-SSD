@@ -47,23 +47,39 @@ the SRS convention.
 
 ## 3. Failed-attempt counting and lockout
 
-**Decision**: Phase 5 adds no failure counting, lockout check or throttling to change-password.
-`ChangePasswordAsync` does not call `AccessFailedAsync`, and the adapter does not add it. A locked or
-disabled user holding a still-valid access token is treated like any authenticated caller.
+**Decision**: An incorrect current password is counted as a failed password attempt through
+Identity: when `ChangePasswordAsync` returns `PasswordMismatch` and `SupportsUserLockout` is true,
+the adapter calls `UserManager.AccessFailedAsync(user)` and commits only that counter update; the
+password and every session stay unchanged. Identity's lockout options currently in effect (Identity
+defaults, externally configurable through the `Identity` section; Roadmap §13.2 sets the SRS values
+in Phase 7) therefore apply exactly as they do for login. Phase 5 adds no lockout
+*check* to change-password, no reset of the counter on success, and no other throttling: a locked
+or disabled user holding a still-valid access token is otherwise treated like any authenticated
+caller (spec edge case), and network-level rate limiting stays in Phase 7.
 
-**Rationale**: The spec assumption and edge case limit the phase to the established behavior and
-defer throttling to Phase 7; FR-LOGIN-005/006 concern login only. The attack surface is bounded by
-the short access-token lifetime and the requirement to already hold a valid token.
+**Rationale**: SRS NFR-SEC-BF-001 requires Identity to count failed password attempts and is not
+scoped to login; Constitution I forbids a lower artifact from weakening it, and Constitution II
+requires an SRS security rule to hold when its capability is introduced rather than waiting for the
+Phase 7 hardening pass. The established Identity
+mechanism (`AccessFailedAsync`) is reused, so no lockout logic is implemented manually (Technical
+Constraints §8). Counting bounds brute-forcing of the current password by a holder of a stolen
+access token. Not resetting the counter on success keeps FR-006 (no attribute other than the
+credential changes); NFR-SEC-BF-005 governs successful *login* only. A failed attempt changes no
+credential and revokes no session, so FR-009 holds.
 
-**Alternatives considered**: Counting failures toward Identity lockout was rejected as an addition
-the spec explicitly excludes; it would also let a holder of a stolen token lock the real user out.
+**Alternatives considered**: Not counting failures was rejected because it contradicts
+NFR-SEC-BF-001 (project decision recorded 2026-10-08 during analysis). Refusing locked-out users
+was rejected as an additional check the spec excludes. Resetting the counter on success was
+rejected because FR-006 forbids changing other account data. The trade-off that a stolen-token
+holder can trigger a temporary lockout is accepted: it is the same exposure login already has.
 
 ## 4. Atomic change and session revocation
 
 **Decision**: One `IsolationLevel.Serializable` transaction on the scoped `AuthenticationDbContext`
 contains: loading the user by token subject, resolving the kept family, `ChangePasswordAsync`, and
 revoking the remaining active families with reason `PasswordChanged`. Any refusal returns before
-commit, and disposal rolls back. Success is returned only after commit.
+commit, and disposal rolls back; the single exception is an incorrect current password, which
+commits only the failed-attempt counter (§3). Success is returned only after commit.
 
 **Rationale**: `UserManager` uses the same scoped context, so its writes join the transaction —
 the pattern already used by `UserAdministration.SetEnabledAsync`. This makes FR-009 (failure revokes
@@ -153,12 +169,16 @@ required by the phase.
 
 ## 10. Verification approach
 
-**Decision**: One integration test class per user story on the existing `AuthenticationApiFactory`
+**Decision**: Consolidated integration test classes per user story on the existing `AuthenticationApiFactory`
 with real Identity, SQLite and `ControlledTimeProvider`; a temporary-file restart test for the
 administrator; `tests/acceptance/phase-5.sh` against Compose (including `docker compose restart
-auth-api`) plus reruns of `phase-1.sh`…`phase-4.sh`; Gate G5 evidence in
-`docs/phase-5-operations.md`. A deterministic concurrency test starts two change requests for one
-user with a barrier and asserts exactly one `204`. No new package, test project or mocking library.
+auth-api`), finishing with `phase-4.sh`, which chains Phases 3–1 as regression; Gate G5 evidence in
+`docs/phase-5-operations.md`. A concurrency test issues two change requests for one user with
+`Task.WhenAll` and asserts exactly one `204` and one `401` (true whether or not they overlap).
+Persistence faults are injected with a temporary SQLite trigger (`RAISE(ABORT)`) on the real test
+database — on `AspNetUsers` for the password write, on `RenewableSessionFamilies` for the
+revocation write — then dropped, so the database survives and rollback can be asserted. No new
+package, test project or mocking library.
 
 **Rationale**: NFR-001/002, Constitution VI and Roadmap §11.5–11.6.
 

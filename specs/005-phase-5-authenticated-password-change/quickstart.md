@@ -30,7 +30,8 @@ The suite must contain consolidated scenarios (NFR-001) proving:
 |---|---|---|
 | 1 | No / invalid / expired bearer token | `401` + `WWW-Authenticate: Bearer`; password unchanged |
 | 2 | Non-JSON, malformed JSON, missing or blank field | `400 The request is invalid.`; nothing changed |
-| 3 | Incorrect current password | `401 Invalid credentials.`, no `WWW-Authenticate`; password and sessions unchanged; `AccessFailedCount` unchanged |
+| 2b | Valid body plus another user's `userId`/`email` | only the caller's password changes; the other user's password still logs in |
+| 3 | Incorrect current password | `401 Invalid credentials.`, no `WWW-Authenticate`; password and sessions unchanged; `AccessFailedCount` incremented by one (NFR-SEC-BF-001); after `MaxFailedAccessAttempts` (effective `IdentityOptions`) consecutive failures login is locked out |
 | 4 | New password violating the configured policy (e.g. `Identity__Password__RequiredLength` raised in the test host) | `400` policy detail; nothing changed |
 | 5 | Valid change by a non-admin user | `204`; old password login → `401`; new password login → `200`; email, roles, enabled state unchanged |
 | 6 | Two families + change with the cookie of family A | A still refreshes (`200`); B refresh → `401`; B's row has reason `PasswordChanged` |
@@ -39,9 +40,11 @@ The suite must contain consolidated scenarios (NFR-001) proving:
 | 9 | Access token issued before the change | still accepted by `ReferenceConsumer.Api` until expiry |
 | 10 | Built-in administrator (`admin@local.invalid` / `admin`) changes password | `204`, no email; still the only enabled Administrator; role and enabled state unchanged |
 | 11 | Restart on the same temporary SQLite file after case 10 | new password `200`; `admin` → `401` |
-| 12 | Two simultaneous changes for one user (barrier, no sleeps) | exactly one `204`, one `401`; only the winning new password logs in |
-| 13 | Database unavailable during the change | `503`; old password still works; sessions intact |
+| 12 | Two concurrent changes for one user (`Task.WhenAll`, no sleeps) | exactly one `204`, one `401`; only the winning new password logs in |
+| 13 | Password write fails (temporary `RAISE(ABORT)` trigger on `AspNetUsers`, dropped afterwards) | generic `503`; after dropping the trigger the old password still works and sessions are intact |
+| 13b | Revocation write fails after the password update (temporary trigger on `RenewableSessionFamilies`) | generic `503`; after dropping the trigger the old password still works, the new one does not, and both families still refresh (FR-010) |
 | 14 | Log capture across cases 3, 5, 6 | one change event with user id, revoked count, UTC time, trace id; no password, hash, stamp, token or cookie value |
+| 15 | Every response body of cases 1–13b | contains neither the submitted current nor new password |
 
 Phase 1–4 test classes must pass unchanged (regression).
 
@@ -65,14 +68,14 @@ configured `Origin`) → `200`.
 
 ```bash
 tests/acceptance/phase-5.sh
-for p in 1 2 3 4; do tests/acceptance/phase-$p.sh; done
 ```
 
 `phase-5.sh` must: start the stack on disposable storage; change the initial administrator
 password; prove a second admin session can no longer refresh while the current one can; run
 `docker compose restart auth-api`; prove the new secret logs in and `admin` does not; prove an
-ordinary user can change their password; confirm `auth-api` logs contain neither password; and
-tear down. Expected: every script prints PASS.
+ordinary user can change their password; confirm `auth-api` logs contain neither password; tear
+down; and finally run `tests/acceptance/phase-4.sh`, which chains Phases 3, 2 and 1 as regression.
+Expected: every script prints PASS.
 
 ## 5. Gate G5 checklist
 

@@ -45,7 +45,8 @@ one indexed family query per request.
 
 **Constraints**: Change and revocation atomic (FR-010); failures change nothing (FR-009); cookie
 only selects the kept family (FR-017); no blacklist or remote validation (FR-011); no secrets in
-responses or logs (FR-014/015); no failure counting or throttling (deferred to Phase 7).
+responses or logs (FR-014/015); an incorrect current password is counted through Identity's
+`AccessFailedAsync` (NFR-SEC-BF-001), with no added lockout check or throttling (Phase 7).
 
 **Scale/Scope**: One endpoint, one Application port with command/outcome, one Infrastructure
 adapter, one enum value, one log event, tests, one acceptance script and Gate G5 documentation.
@@ -56,12 +57,12 @@ adapter, one enum value, one log event, tests, one acceptance script and Gate G5
 
 | Gate | Pre-research | Post-design | Evidence |
 |---|---|---|---|
-| I. Baseline authority and traceability | PASS | PASS | Decisions trace to SRS §17 FR-CHANGE-PWD-001–005, FR-ADMIN-BOOT-003, NFR-SEC-ADMIN-001–003, FR-LOGOUT-005–007, FR-USER-005, NFR-LOG-002, §34 error table; Technical Constraints §8 (Identity responsibilities); Roadmap §11/G5. Status codes are settled by the SRS §34 table ([research.md §2](research.md)), not invented. |
+| I. Baseline authority and traceability | PASS | PASS | Decisions trace to SRS §17 FR-CHANGE-PWD-001–005, FR-ADMIN-BOOT-003, NFR-SEC-ADMIN-001–003, NFR-SEC-BF-001, FR-LOGOUT-005–007, FR-USER-005, NFR-LOG-002, §34 error table; Technical Constraints §8 (Identity responsibilities); Roadmap §11/G5. Status codes are settled by the SRS §34 table ([research.md §2](research.md)), not invented. |
 | II. Incremental vertical capabilities | PASS | PASS | Only Roadmap §11.2 scope. Reuses Phase 4 families and cookie. No SMTP, `IEmailSender`, forgot/reset, reset token, MFA, session listing or rate limiting. |
 | III. Hexagonal boundaries and feature slices | PASS | PASS | Domain: enum value only, existing `Revoke`/`IsActive`. Application: `Features/Passwords` port, command, outcome (no Identity types). Infrastructure: `Identity/PasswordChange` owns Identity + EF transaction. API: `Features/Passwords` endpoint, request, cookie read, ProblemDetails mapping. `Program.cs` only mounts the endpoint. |
 | IV. Deliberate simplicity and dependency control | PASS | PASS | No package, migration, handler, repository or new service. One port with one current consumer. |
 | V. Security by construction | PASS | PASS | Identity verifies, validates and hashes; security stamp handled by Identity. Account target from `sub` only. Generic details, no Identity descriptions. RS256/consumer validation untouched. Log event carries no secrets. Bearer-only authorization makes Origin checks unnecessary ([research.md §6](research.md)). |
-| VI. Tests of implemented behavior | PASS | PASS | [quickstart.md](quickstart.md) lists 14 consolidated integration scenarios on real SQLite/Identity, controlled time, deterministic concurrency, restart on a temp file, log scanning, acceptance and Phase 1–4 regression. |
+| VI. Tests of implemented behavior | PASS | PASS | [quickstart.md](quickstart.md) lists the consolidated integration scenarios on real SQLite/Identity: controlled time, concurrency, trigger-injected rollback faults, restart on a temp file, log scanning, acceptance and Phase 1–4 regression. |
 | VII. Persistence ownership and deployment integrity | PASS | PASS | Same Auth-owned database and startup path; no schema change; idempotent bootstrap preserves the changed administrator password (verified by restart tests). |
 
 No constitution violation requires a complexity exception.
@@ -84,8 +85,8 @@ No constitution violation requires a complexity exception.
 
 Serializable transaction → `FindByIdAsync(sub)` → resolve kept family (rules in
 [data-model.md](data-model.md)) → `ChangePasswordAsync` → map Identity errors (`PasswordMismatch`
-→ `InvalidCurrentPassword`; `Password*` → `InvalidNewPassword`; else `Invalid`) and return without
-commit on failure → load the user's non-revoked families, revoke those `IsActive(now)` and not kept
+→ `AccessFailedAsync`, commit the counter only, `InvalidCurrentPassword`; `Password*` →
+`InvalidNewPassword`; else `Invalid`) and return without commit on those other failures → load the user's non-revoked families, revoke those `IsActive(now)` and not kept
 with `PasswordChanged` → `SaveChangesAsync` → commit → `LoggerMessage` event.
 
 ### Files
@@ -100,7 +101,7 @@ src/Authentication.Infrastructure/DependencyInjection.cs                    # re
 src/Authentication.Api/Features/Passwords/ChangePasswordEndpoint.cs         # new
 src/Authentication.Api/Features/Passwords/ChangePasswordRequest.cs          # new
 src/Authentication.Api/Program.cs                                           # MapChangePasswordEndpoint()
-tests/Authentication.IntegrationTests/Scenarios/PasswordChange*Tests.cs     # new, per story
+tests/Authentication.IntegrationTests/Scenarios/PasswordChange*Tests.cs     # new: core, concurrency, session revocation, administrator
 tests/acceptance/phase-5.sh                                                 # new
 docs/phase-5-operations.md                                                  # new: retire-`admin` procedure (NFR-SEC-ADMIN-001) + Gate G5 evidence
 ```

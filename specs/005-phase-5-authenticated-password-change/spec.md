@@ -233,7 +233,8 @@ closing commit merged to `main`), so its prerequisite does not block this specif
   `admin` password is deliberately weak) and Phase 5 does not strengthen it.
 - Incorrect-current-password failures follow the established client-error problem-details
   convention; the exact status code and body are contract details settled in planning.
-- Failed current-password attempts follow whatever Identity lockout behavior is already
-  established; Phase 5 adds no new throttling, which belongs to Phase 7.
+- An incorrect current password is a failed password attempt counted by Identity (SRS
+  NFR-SEC-BF-001), so the configured Identity lockout applies as it does for login; the change
+  operation itself adds no lockout check, and further throttling belongs to Phase 7.
 - Request and response schemas are design-contract details decided in planning, provided they
   satisfy the behavior above.
