@@ -13,4 +13,10 @@ public interface IUserAdministration
     Task<AdministrationResult<UserView>> UpdateEmailAsync(string id, string email, CancellationToken cancellationToken);
 
     Task<AdministrationResult<UserView>> SetEnabledAsync(string id, bool enabled, CancellationToken cancellationToken);
+
+    /// <summary>Replaces the user's complete role set with exactly the supplied existing roles.</summary>
+    Task<AdministrationResult<UserView>> ReplaceRolesAsync(
+        string id,
+        IReadOnlyList<string> roles,
+        CancellationToken cancellationToken);
 }

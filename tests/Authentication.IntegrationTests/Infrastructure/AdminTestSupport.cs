@@ -15,6 +15,8 @@ public sealed record AdminUserBody(
     DateTime? LockoutEndUtc,
     string[] Roles);
 
+public sealed record AdminRoleBody(string Id, string Name);
+
 /// <summary>Shared helpers for the Phase 3 scenario classes; they only call the public HTTP surface.</summary>
 public static class AdminTestSupport
 {
@@ -72,5 +74,32 @@ public static class AdminTestSupport
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         return (await response.Content.ReadFromJsonAsync<AdminUserBody>(cancellationToken))!;
+    }
+
+    /// <summary>Creates a role through the administrative endpoint and returns the created view.</summary>
+    public static async Task<AdminRoleBody> CreateRoleAsync(
+        HttpClient administratorClient,
+        string name,
+        CancellationToken cancellationToken)
+    {
+        using var response = await administratorClient.PostAsJsonAsync("/api/admin/roles", new { name }, cancellationToken);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        return (await response.Content.ReadFromJsonAsync<AdminRoleBody>(cancellationToken))!;
+    }
+
+    /// <summary>Returns the <c>role</c> claim values of an access token (none, one, or several).</summary>
+    public static string[] RolesOf(string accessToken)
+    {
+        var payload = Microsoft.IdentityModel.Tokens.Base64UrlEncoder.Decode(accessToken.Split('.')[1]);
+        using var document = System.Text.Json.JsonDocument.Parse(payload);
+        if (!document.RootElement.TryGetProperty("role", out var role))
+        {
+            return [];
+        }
+
+        return role.ValueKind == System.Text.Json.JsonValueKind.Array
+            ? [.. role.EnumerateArray().Select(value => value.GetString()!).Order()]
+            : [role.GetString()!];
     }
 }

@@ -13,6 +13,7 @@ public static class UserAdministrationEndpoints
         group.MapGet("/users/{id}", GetAsync);
         group.MapPost("/users", CreateAsync);
         group.MapPatch("/users/{id}", UpdateAsync);
+        group.MapPut("/users/{id}/roles", ReplaceRolesAsync);
         group.MapPost("/users/{id}/enable", (string id, IUserAdministration users, CancellationToken cancellationToken) =>
             SetEnabledAsync(id, true, users, cancellationToken));
         group.MapPost("/users/{id}/disable", (string id, IUserAdministration users, CancellationToken cancellationToken) =>
@@ -70,5 +71,21 @@ public static class UserAdministrationEndpoints
             }
 
             return (await users.UpdateEmailAsync(id, request.Email!, cancellationToken)).ToOk();
+        });
+
+    private static Task<IResult> ReplaceRolesAsync(
+        string id,
+        HttpRequest httpRequest,
+        IUserAdministration users,
+        CancellationToken cancellationToken) =>
+        AdministrationResults.RunAsync(async () =>
+        {
+            var request = await AdministrationRequests.ReadAsync<ReplaceUserRolesRequest>(httpRequest, cancellationToken);
+            if (request is null || !request.IsValid)
+            {
+                return AdministrationResults.InvalidRequest();
+            }
+
+            return (await users.ReplaceRolesAsync(id, request.Roles!, cancellationToken)).ToOk();
         });
 }

@@ -1,4 +1,5 @@
 using Authentication.Application.Features.Login;
+using Authentication.Application.Features.Roles;
 using Authentication.Application.Features.Users;
 using Authentication.Infrastructure.Health;
 using Authentication.Infrastructure.Identity;
@@ -50,6 +51,7 @@ public static class DependencyInjection
         services.AddScoped<IIdentityCredentialValidator, IdentityCredentialValidator>();
         services.AddScoped<LoginHandler>();
         services.AddScoped<IUserAdministration, UserAdministration>();
+        services.AddScoped<IRoleAdministration, RoleAdministration>();
 
         services.AddDbContext<AuthenticationDbContext>(options =>
             options.UseSqlite(sqliteOptions.ConnectionString));

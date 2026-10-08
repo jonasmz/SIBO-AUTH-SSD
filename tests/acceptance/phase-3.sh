@@ -116,4 +116,59 @@ DISABLED_BODY="$(jq -S 'del(.traceId)' "$BODY_FILE")"
 [ "$(login_status operator@example.test "$USER_PASSWORD")" = 200 ] || fail "re-enabled user could not log in with the same password"
 pass "disable refuses login with a body identical to a wrong password; enable restores it"
 
-echo "Phase 3 acceptance: checks completed"
+# --- US3: roles and assignments ------------------------------------------------------------
+[ "$(status_of POST /api/admin/roles "$ADMIN_TOKEN" '{"name":"Operator"}')" = 201 ] || fail "role creation failed"
+ROLE_ID="$(jq -r .id "$BODY_FILE")"
+[ "$(status_of PUT "/api/admin/users/$USER_ID/roles" "$ADMIN_TOKEN" '{"roles":["Operator"]}')" = 200 ] || fail "role assignment failed"
+OPERATOR_TOKEN="$(login_token operator@example.test "$USER_PASSWORD")"
+[ "$(status_of GET /api/admin/users "$OPERATOR_TOKEN")" = 403 ] || fail "a non-administrator was not refused with 403"
+A_STATUS="$(curl --silent --output "$BODY_FILE" --write-out '%{http_code}' --header "Authorization: Bearer $OPERATOR_TOKEN" "http://localhost:${A_PORT}/api/caller")"
+[ "$A_STATUS" = 200 ] || fail "api-a rejected the new token ($A_STATUS)"
+[ "$(jq -r '.roles | join(",")' "$BODY_FILE")" = Operator ] || fail "api-a did not report the assigned role"
+pass "role created and assigned; the new token is 403 on the admin API and carries Operator at api-a"
+
+[ "$(status_of DELETE "/api/admin/roles/$ROLE_ID" "$ADMIN_TOKEN")" = 409 ] || fail "an assigned role was deleted"
+[ "$(status_of PUT "/api/admin/users/$USER_ID/roles" "$ADMIN_TOKEN" '{"roles":[]}')" = 200 ] || fail "role removal failed"
+[ "$(status_of DELETE "/api/admin/roles/$ROLE_ID" "$ADMIN_TOKEN")" = 204 ] || fail "an unassigned role could not be deleted"
+pass "deleting an assigned role is refused (409); after removal it is deleted (204)"
+
+# --- US4: the last enabled administrator is protected ----------------------------------------
+BUILTIN_ADMIN_ID="7f0b4a3e-5c1d-4e8a-9b6f-0a1c2d3e4f02"
+[ "$(status_of POST "/api/admin/users/$BUILTIN_ADMIN_ID/disable" "$ADMIN_TOKEN")" = 409 ] || fail "the sole enabled administrator could be disabled"
+[ "$(status_of PUT "/api/admin/users/$BUILTIN_ADMIN_ID/roles" "$ADMIN_TOKEN" '{"roles":[]}')" = 409 ] || fail "the sole enabled administrator lost its role"
+[ "$(status_of GET "/api/admin/users/$BUILTIN_ADMIN_ID" "$ADMIN_TOKEN")" = 200 ] || fail "administrator could not be read after the refusals"
+[ "$(jq -r '.enabled' "$BODY_FILE")" = true ] || fail "the administrator is no longer enabled"
+[ "$(jq -r '.roles | join(",")' "$BODY_FILE")" = Administrator ] || fail "the administrator lost the Administrator role"
+pass "the sole enabled administrator cannot be disabled or lose its role (409, unchanged)"
+
+# --- Persistence across a restart ---------------------------------------------------------
+[ "$(status_of POST "/api/admin/users/$USER_ID/disable" "$ADMIN_TOKEN")" = 200 ] || fail "could not disable the user before the restart"
+docker compose restart auth-api >/dev/null
+wait_for "$BASE/health/ready" || fail "auth-api was not ready after the restart"
+ADMIN_TOKEN="$(login_token "$ADMIN_EMAIL" "$ADMIN_PASSWORD")"
+[ "$(status_of GET /api/admin/users "$ADMIN_TOKEN")" = 200 ] || fail "administrator could not list users after the restart"
+[ "$(jq length "$BODY_FILE")" = 2 ] || fail "the restart changed the number of users"
+[ "$(jq -r --arg id "$USER_ID" '.[] | select(.id == $id) | "\(.email) \(.enabled)"' "$BODY_FILE")" = "operator@example.test false" ] \
+  || fail "the created user, its email, or its disabled state did not persist"
+[ "$(jq -r --arg id "$BUILTIN_ADMIN_ID" '[.[] | select(.id == $id)] | length' "$BODY_FILE")" = 1 ] || fail "the built-in administrator was re-created or lost"
+pass "restart: users, emails, and enabled state persisted; the administrator was not re-created"
+
+# --- No secret reaches the auth-api logs (NFR-002) ----------------------------------------
+LOGS="$(docker compose logs auth-api 2>&1)"
+for secret in "$USER_PASSWORD" "Not-The-Password1" "$ADMIN_TOKEN" "$OPERATOR_TOKEN" "PRIVATE KEY" '"password"'; do
+  if grep -qF -- "$secret" <<<"$LOGS"; then fail "a secret or credential appears in the auth-api logs"; fi
+done
+pass "auth-api logs contain no passwords, access tokens, or private key material"
+
+docker compose down -v >/dev/null
+
+# --- Regression: Phase 2 acceptance (which runs Phase 1), with this script's variables unset ----
+(
+  unset AUTH_JWT_PUBLIC_KEY_HOST_FILE AUTH_JWT_CLOCK_SKEW_SECONDS API_A_HTTP_PORT API_B_HTTP_PORT \
+        COMPOSE_PROJECT_NAME AUTH_HTTP_PORT AUTH_SQLITE_HOST_PATH AUTH_RSA_HOST_PATH \
+        AUTH_JWT_ISSUER AUTH_JWT_AUDIENCE
+  "$REPO_ROOT/tests/acceptance/phase-2.sh"
+) || fail "Phase 2 regression failed"
+pass "Phase 2 acceptance regression (includes Phase 1)"
+
+echo "Phase 3 acceptance: ALL PASS"

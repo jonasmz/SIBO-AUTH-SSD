@@ -16,6 +16,7 @@ public sealed class UserAdministration(
 {
     private const string UserNotFound = "The user was not found.";
     private const string InvalidRequest = "The request is invalid.";
+    private const string RolesMissing = "One or more roles do not exist.";
     private const string LastAdministrator = "The operation would leave no enabled administrator.";
 
     public async Task<IReadOnlyList<UserView>> ListAsync(CancellationToken cancellationToken)
@@ -47,11 +48,13 @@ public sealed class UserAdministration(
         // One transaction: SQLite takes its write lock first, and a refusal leaves no partial state.
         await using var transaction = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
 
-        var roleNames = await ResolveRoleNamesAsync(command.Roles);
-        if (roleNames is null)
+        var roles = await ResolveRolesAsync(command.Roles);
+        if (roles is null)
         {
-            return new AdministrationResult<UserView>(AdministrationError.Invalid, "One or more roles do not exist.");
+            return new AdministrationResult<UserView>(AdministrationError.Invalid, RolesMissing);
         }
+
+        var roleNames = roles.Select(role => role.Name!).ToList();
 
         var id = Guid.NewGuid().ToString();
         var user = new ApplicationUser { Id = id, UserName = id, Email = command.Email, IsEnabled = command.Enabled };
@@ -155,10 +158,72 @@ public sealed class UserAdministration(
          where assignment.RoleId == DatabaseInitializer.AdministratorRoleId && user.IsEnabled
          select user.Id).CountAsync(cancellationToken);
 
-    /// <summary>Resolves distinct existing role names after normalization; <see langword="null"/> when any is missing.</summary>
-    private async Task<List<string>?> ResolveRoleNamesAsync(IReadOnlyList<string> requested)
+    public async Task<AdministrationResult<UserView>> ReplaceRolesAsync(
+        string id,
+        IReadOnlyList<string> roles,
+        CancellationToken cancellationToken)
     {
-        var resolved = new Dictionary<string, string>(StringComparer.Ordinal);
+        ArgumentNullException.ThrowIfNull(roles);
+
+        await using var transaction = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+
+        var user = await userManager.FindByIdAsync(id);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        var target = await ResolveRolesAsync(roles);
+        if (target is null)
+        {
+            return new AdministrationResult<UserView>(AdministrationError.Invalid, RolesMissing);
+        }
+
+        var holdsAdministratorRole = await context.UserRoles.AnyAsync(
+            assignment => assignment.UserId == id && assignment.RoleId == DatabaseInitializer.AdministratorRoleId,
+            cancellationToken);
+        var keepsAdministratorRole = target.Exists(role => role.Id == DatabaseInitializer.AdministratorRoleId);
+
+        if (!AdministratorContinuity.Permits(
+                isEnabledAdministratorNow: user.IsEnabled && holdsAdministratorRole,
+                remainsEnabledAdministrator: user.IsEnabled && keepsAdministratorRole,
+                enabledAdministratorCount: await CountEnabledAdministratorsAsync(cancellationToken)))
+        {
+            return new AdministrationResult<UserView>(AdministrationError.Conflict, LastAdministrator);
+        }
+
+        var current = await userManager.GetRolesAsync(user);
+        var targetNames = target.Select(role => role.Name!).ToList();
+        var toRemove = current.Where(name => !targetNames.Contains(name, StringComparer.Ordinal)).ToList();
+        var toAdd = targetNames.Where(name => !current.Contains(name, StringComparer.Ordinal)).ToList();
+
+        if (toRemove.Count > 0)
+        {
+            var removed = await userManager.RemoveFromRolesAsync(user, toRemove);
+            if (!removed.Succeeded)
+            {
+                return Failure(removed);
+            }
+        }
+
+        if (toAdd.Count > 0)
+        {
+            var added = await userManager.AddToRolesAsync(user, toAdd);
+            if (!added.Succeeded)
+            {
+                return Failure(added);
+            }
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+
+        return await FindAsync(id, cancellationToken);
+    }
+
+    /// <summary>Resolves distinct existing roles after name normalization; <see langword="null"/> when any is missing.</summary>
+    private async Task<List<IdentityRole<string>>?> ResolveRolesAsync(IReadOnlyList<string> requested)
+    {
+        var resolved = new Dictionary<string, IdentityRole<string>>(StringComparer.Ordinal);
 
         foreach (var name in requested)
         {
@@ -168,7 +233,7 @@ public sealed class UserAdministration(
                 return null;
             }
 
-            resolved[role.Id] = role.Name;
+            resolved[role.Id] = role;
         }
 
         return [.. resolved.Values];

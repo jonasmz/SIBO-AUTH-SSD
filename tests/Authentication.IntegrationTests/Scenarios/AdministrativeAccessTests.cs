@@ -16,7 +16,7 @@ public sealed class AdministrativeAccessTests
     private sealed record Operation(string Name, HttpMethod Method, string Path, Func<string> Body, HttpStatusCode AdministratorStatus);
 
     /// <summary>The administrative operation list; later stories add their own operations here.</summary>
-    private static IReadOnlyList<Operation> Operations(string existingUserId) =>
+    private static IReadOnlyList<Operation> Operations(string existingUserId, string existingRoleId) =>
     [
         new("list users", HttpMethod.Get, "/api/admin/users", () => string.Empty, HttpStatusCode.OK),
         new("get user", HttpMethod.Get, $"/api/admin/users/{existingUserId}", () => string.Empty, HttpStatusCode.OK),
@@ -33,7 +33,27 @@ public sealed class AdministrativeAccessTests
             () => JsonSerializer.Serialize(new { email = $"{Guid.NewGuid():N}@example.test" }),
             HttpStatusCode.OK),
         new("enable user", HttpMethod.Post, $"/api/admin/users/{existingUserId}/enable", () => string.Empty, HttpStatusCode.OK),
-        new("disable user", HttpMethod.Post, $"/api/admin/users/{existingUserId}/disable", () => string.Empty, HttpStatusCode.OK)
+        new("disable user", HttpMethod.Post, $"/api/admin/users/{existingUserId}/disable", () => string.Empty, HttpStatusCode.OK),
+        new("list roles", HttpMethod.Get, "/api/admin/roles", () => string.Empty, HttpStatusCode.OK),
+        new(
+            "create role",
+            HttpMethod.Post,
+            "/api/admin/roles",
+            () => JsonSerializer.Serialize(new { name = $"Role{Guid.NewGuid():N}" }),
+            HttpStatusCode.Created),
+        new(
+            "rename role",
+            HttpMethod.Patch,
+            $"/api/admin/roles/{existingRoleId}",
+            () => JsonSerializer.Serialize(new { name = $"Role{Guid.NewGuid():N}" }),
+            HttpStatusCode.OK),
+        new(
+            "replace user roles",
+            HttpMethod.Put,
+            $"/api/admin/users/{existingUserId}/roles",
+            () => JsonSerializer.Serialize(new { roles = Array.Empty<string>() }),
+            HttpStatusCode.OK),
+        new("delete role", HttpMethod.Delete, $"/api/admin/roles/{existingRoleId}", () => string.Empty, HttpStatusCode.NoContent)
     ];
 
     [Fact]
@@ -49,8 +69,9 @@ public sealed class AdministrativeAccessTests
             administrator, "plain.user@example.test", "Passw0rd!", cancellationToken: cancellationToken);
         var plainToken = await AdminTestSupport.LoginAsync(anonymous, "plain.user@example.test", "Passw0rd!", cancellationToken);
         using var plainUser = AdminTestSupport.WithBearer(factory, plainToken);
+        var probeRole = await AdminTestSupport.CreateRoleAsync(administrator, "AccessProbe", cancellationToken);
 
-        foreach (var operation in Operations(operatorUser.Id))
+        foreach (var operation in Operations(operatorUser.Id, probeRole.Id))
         {
             using var noToken = await SendAsync(anonymous, operation, cancellationToken);
             Assert.True(noToken.StatusCode == HttpStatusCode.Unauthorized, $"{operation.Name}: no token -> {(int)noToken.StatusCode}");

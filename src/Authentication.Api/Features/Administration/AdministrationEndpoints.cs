@@ -1,3 +1,4 @@
+using Authentication.Api.Features.Roles;
 using Authentication.Api.Features.Users;
 using Authentication.Infrastructure.Security;
 
@@ -18,6 +19,7 @@ public static class AdministrationEndpoints
             .RequireAuthorization(JwtValidationRegistration.AdministratorPolicy);
 
         group.MapUserAdministrationEndpoints();
+        group.MapRoleAdministrationEndpoints();
 
         return endpoints;
     }
