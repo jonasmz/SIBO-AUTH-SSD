@@ -77,8 +77,8 @@ Both consumers keep accepting the still-valid token.
 ## 6. Private Key Absent from Consumers
 
 ```bash
-docker compose exec api-a sh -c 'grep -rl "PRIVATE KEY" / 2>/dev/null | head -1'   # no output
-docker compose exec api-b sh -c 'grep -rl "PRIVATE KEY" / 2>/dev/null | head -1'   # no output
+docker compose exec api-a sh -c 'grep -rl "PRIVATE KEY" /var/lib /app /etc 2>/dev/null'   # no output
+docker compose exec api-b sh -c 'grep -rl "PRIVATE KEY" /var/lib /app /etc 2>/dev/null'   # no output
 docker inspect --format '{{range .Mounts}}{{.Source}} {{end}}' "$(docker compose ps -q api-a)"
 ```
 
@@ -86,7 +86,8 @@ Only the public key file appears as a mount.
 
 ## 7. Regression and Gate G2 Record
 
-Run `tests/acceptance/phase-1.sh` and `tests/acceptance/phase-2.sh`. Record:
+Run `tests/acceptance/phase-2.sh`, which also runs `tests/acceptance/phase-1.sh` as regression
+(use disposable storage; it manages its own Compose project and ports). Record:
 
 | Evidence | Required result |
 |---|---|

@@ -163,6 +163,60 @@ public sealed class ConsumerValidationTests
         Assert.Equal(HttpStatusCode.Unauthorized, beyondTolerance.StatusCode);
     }
 
+    [Fact]
+    public async Task AdministratorEndpointRequiresTheAdministratorRoleOnBothConsumers()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var minter = new TestTokenMinter();
+        using var apiA = new ReferenceConsumerFactory("api-a", minter.PublicKeyPem);
+        using var apiB = new ReferenceConsumerFactory("api-b", minter.PublicKeyPem);
+
+        foreach (var (service, factory) in new[] { ("api-a", apiA), ("api-b", apiB) })
+        {
+            using var client = factory.CreateClient();
+
+            // Single role and multiple roles including Administrator are both authorized.
+            foreach (var roles in new[] { new[] { "Administrator" }, ["Operator", "Administrator"] })
+            {
+                using var allowed = await GetAsync(
+                    client, "/api/caller/administrator", minter.Mint(new TestTokenRequest { Roles = roles }), cancellationToken);
+                Assert.True(allowed.StatusCode == HttpStatusCode.OK, $"{service}: {string.Join(",", roles)}");
+                var caller = await allowed.Content.ReadFromJsonAsync<CallerBody>(cancellationToken);
+                Assert.Equal(service, caller!.Service);
+                Assert.Equal(roles, caller.Roles);
+            }
+
+            // A valid token without the role is authenticated (200 on the caller endpoint) but forbidden.
+            foreach (var roles in new[] { new[] { "Operator" }, Array.Empty<string>() })
+            {
+                var token = minter.Mint(new TestTokenRequest { Roles = roles });
+
+                using var authenticated = await GetAsync(client, "/api/caller", token, cancellationToken);
+                using var forbidden = await GetAsync(client, "/api/caller/administrator", token, cancellationToken);
+
+                Assert.True(authenticated.StatusCode == HttpStatusCode.OK, $"{service}: caller with [{string.Join(",", roles)}]");
+                Assert.True(forbidden.StatusCode == HttpStatusCode.Forbidden, $"{service}: admin with [{string.Join(",", roles)}]");
+                Assert.Empty(await forbidden.Content.ReadAsByteArrayAsync(cancellationToken));
+            }
+
+            // No valid token is 401, never 403.
+            using var anonymous = await client.GetAsync("/api/caller/administrator", cancellationToken);
+            Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
+        }
+    }
+
+    private static async Task<HttpResponseMessage> GetAsync(
+        HttpClient client,
+        string path,
+        string token,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, path);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        return await client.SendAsync(request, cancellationToken);
+    }
+
     private static TestTokenRequest Expired(DateTimeOffset now, TimeSpan expiredFor) => new()
     {
         IssuedAt = now - expiredFor - TimeSpan.FromMinutes(15),

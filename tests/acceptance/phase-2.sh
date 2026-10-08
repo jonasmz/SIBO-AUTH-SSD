@@ -86,6 +86,16 @@ SUBJECT_B="$(assert_caller "$B_PORT" api-b)"
 [ "$SUBJECT_A" = "$SUBJECT_B" ] || fail "consumers disagree on the caller subject"
 pass "api-a and api-b accept a real token with identical subject ($SUBJECT_A) and roles"
 
+# --- US3: the real administrator token reaches the role-restricted endpoint ------------
+# The 403 case is proven by the automated suite: Phase 2 cannot issue a real non-administrator token.
+for port_service in "$A_PORT:api-a" "$B_PORT:api-b"; do
+  port="${port_service%%:*}"; service="${port_service##*:}"
+  [ "$(status_of "http://localhost:${port}/api/caller/administrator" "$TOKEN")" = 200 ] || fail "$service denied the administrator token on /api/caller/administrator"
+  [ "$(jq -r '.roles | join(",")' "$BODY_FILE")" = Administrator ] || fail "$service administrator endpoint reported unexpected roles"
+  [ "$(status_of "http://localhost:${port}/api/caller/administrator")" = 401 ] || fail "$service did not return 401 on /api/caller/administrator without a token"
+done
+pass "api-a and api-b authorize the administrator token on the role-restricted endpoint (401 without a token)"
+
 docker compose stop auth-api >/dev/null
 [ "$(assert_caller "$A_PORT" api-a)" = "$SUBJECT_A" ] || fail "api-a stopped accepting while auth-api is down"
 [ "$(assert_caller "$B_PORT" api-b)" = "$SUBJECT_B" ] || fail "api-b stopped accepting while auth-api is down"
