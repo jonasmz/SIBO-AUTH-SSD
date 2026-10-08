@@ -28,7 +28,7 @@ session invariants, configuration, and API security boundary work is completed f
 unrelated deployment or consumer behavior.
 
 - [ ] T001 Add externally validated `RefreshSession:LifetimeDays` (default `7`) and required `Security:FrontendOrigin` configuration in `src/Authentication.Api/appsettings.json`, propagate `Security__FrontendOrigin` and the optional lifetime override through `compose.yml`, and document runnable example values in `.env.example`; invalid or missing required configuration must fail fast without exposing its value.
-- [ ] T002 [P] Document Phase 4 `auth_refresh` cookie attributes, Origin requirement, response schemas, and 204/401/403/404 outcomes in `specs/004-phase-4-refresh-sessions-logout/contracts/authentication-api-sessions.openapi.yaml`.
+- [ ] T002 [P] Keep the Phase 4 contract aligned by documenting `auth_refresh` cookie attributes, the Origin requirement, request/response schemas, and every applicable 200/204/400/401/403/404/503 outcome in `specs/004-phase-4-refresh-sessions-logout/contracts/authentication-api-sessions.openapi.yaml`.
 - [ ] T003 [P] Extend reusable test configuration and cookie/origin request helpers for Phase 4 in `tests/Authentication.IntegrationTests/Infrastructure/AuthenticationApiFactory.cs`.
 
 ---
