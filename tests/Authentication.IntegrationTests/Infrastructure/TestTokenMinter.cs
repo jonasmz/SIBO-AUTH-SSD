@@ -6,30 +6,6 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Authentication.IntegrationTests.Infrastructure;
 
-public enum TestTokenAlgorithm
-{
-    Rs256,
-    Rs512,
-    None
-}
-
-public sealed record TestTokenRequest
-{
-    public string Subject { get; init; } = "7f0b4a3e-5c1d-4e8a-9b6f-0a1c2d3e4f02";
-
-    public string Issuer { get; init; } = TestTokenMinter.DefaultIssuer;
-
-    public string Audience { get; init; } = TestTokenMinter.DefaultAudience;
-
-    public IReadOnlyList<string> Roles { get; init; } = ["Administrator"];
-
-    public DateTimeOffset? IssuedAt { get; init; }
-
-    public DateTimeOffset? ExpiresAt { get; init; }
-
-    public TestTokenAlgorithm Algorithm { get; init; } = TestTokenAlgorithm.Rs256;
-}
-
 /// <summary>Signs test tokens with a disposable RSA pair; the public half is what consumers receive.</summary>
 public sealed class TestTokenMinter : IDisposable
 {
