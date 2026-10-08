@@ -62,15 +62,16 @@ be positive integers or startup fails. They are reviewed in `docs/phase-7-operat
     `[before + span, after + span]` (bounds around the request, not a duration threshold), then
     moves the persisted `LockoutEnd` into the past through `UserManager.SetLockoutEndDateAsync` and
     proves the correct password authenticates. This is controlled time at the only seam Identity has.
-  - Request windows: automated tests assert exhaustion, `429` shape, `Retry-After`, independence
-    and partitioning only, using windows long enough that no test can cross one; no test waits.
-    Window renewal is framework behavior; it is demonstrated once by the acceptance script on a
-    short configured window, waiting only the `Retry-After` the service itself returned.
-- **Rationale**: Satisfies NFR-002's intent (no arbitrary waits, no timing thresholds in the
-  suite) without replacing framework mechanisms with custom clock-aware limiters, which
+  - Request windows: integration tests and acceptance assert exhaustion, `429` shape,
+    independence, partitioning, and that `Retry-After` is present, positive and no longer than the
+    configured window, using windows long enough that no step can cross one. Window renewal itself
+    is the framework limiter's behavior, verified by inspection of the configured fixed-window
+    options (SRS §49.4 method I) plus the reported `Retry-After`; no test or acceptance step sleeps.
+- **Rationale**: Satisfies spec NFR-002 and Constitution VI (no real sleeps in time-dependent
+  tests) without replacing framework mechanisms with custom clock-aware limiters, which
   Constitution IV/V disfavor.
 - **Alternatives**: Custom `RateLimiter` subclass on `TimeProvider` (security code duplicating the
-  framework); `Task.Delay` in tests (forbidden by Constitution VI).
+  framework); `Task.Delay` in tests or `sleep` in acceptance (forbidden by Constitution VI).
 
 ## 5. Partition key and address normalization
 

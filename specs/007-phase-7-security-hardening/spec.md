@@ -221,9 +221,13 @@ every flow.
   trusted proxy's headers do; cookie attributes and logout cleanup; rejected cross-origin refresh and
   logout with same-origin acceptance; login, recovery, and reset equivalence; and secret-free
   responses and logs.
-- **NFR-002**: Verification MUST be deterministic, with controlled time for lockout expiry and limit
-  windows, no arbitrary waits, and no timing thresholds; unknown-account equivalence is verified by
-  the work performed, not by measured duration.
+- **NFR-002**: Verification MUST be deterministic, with no waits or sleeps for elapsed time and no
+  timing thresholds. Where the framework exposes no time seam (Identity lockout and the
+  framework request limiter read the system clock), time is controlled through the state itself:
+  lockout expiry by moving the persisted lockout end into the past, and window renewal by
+  asserting the window the service reports (`Retry-After` present and no longer than the configured
+  window) rather than by waiting for it; unknown-account equivalence is verified by the work
+  performed, not by measured duration.
 - **NFR-003**: The feature MUST NOT add Redis, distributed counters, external caches, database-backed
   limit storage, a gateway service, or speculative abstractions.
 

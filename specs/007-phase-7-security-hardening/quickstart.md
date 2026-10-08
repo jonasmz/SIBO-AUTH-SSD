@@ -31,8 +31,8 @@ No test waits for wall-clock time ([research.md §4](research.md)).
 tests/acceptance/phase-7.sh
 ```
 
-Expected `PASS` lines: lockout over Compose; app 429 (`application/problem+json`) per policy;
-renewal after the returned `Retry-After` on a short configured window; direct forged
+Expected `PASS` lines: lockout over Compose; app 429 (`application/problem+json`) per policy with
+a `Retry-After` no longer than the configured window (no step sleeps); direct forged
 `X-Forwarded-For` ignored (log shows the real peer); through `reference-proxy` the log shows the
 client address, not the proxy or the forged value; Nginx first-layer 429 (HTML) observed; no
 secrets in `auth-api` logs; Phase 6→1 regression with lifted limits. Teardown removes all

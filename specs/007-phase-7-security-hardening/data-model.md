@@ -19,7 +19,8 @@ count max-1     --wrong password--> LockoutEnd = now + span, count 0   → event
 locked          --any password-----> refused, state unchanged          → event LoginFailed(LockedOut)
 locked, LockoutEnd <= now --correct--> authenticated, count reset to 0
 any             --correct (enabled)-> count 0
-disabled        --any password-----> refused, count unchanged          → event LoginFailed(Disabled)
+disabled        --correct password-> refused, count unchanged          → event LoginFailed(Disabled)
+disabled        --wrong password---> same as the wrong-password rows    → event LoginFailed(WrongPassword)
 ```
 
 Request limiting never reads or writes these fields.

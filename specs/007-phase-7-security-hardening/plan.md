@@ -69,7 +69,7 @@ proxy configuration, acceptance override and script, Gate G7 documentation.
 | I. Baseline authority and traceability | PASS | PASS | Decisions trace to SRS NFR-SEC-BF-001–013, NFR-NET-001–003, NFR-CSRF-001–004, NFR-CORS-001–003, NFR-SEC-ENUM-001–005, NFR-LOG-001–004, NFR-CONFIG-002/003, TEST-044/045; Technical Constraints §14.4, §15, §37; Roadmap §13/G7. Limit defaults are recorded as a project decision ([research.md §2](research.md)), not as normative values. The deterministic-window reconciliation (NFR-002) is recorded in [research.md §4](research.md). |
 | II. Incremental vertical capabilities | PASS | PASS | Only Roadmap §13 scope. No endpoint, session semantics, frontend, TLS, file logger or production Nginx (Phase 8). The proxy container exists only in the acceptance override. |
 | III. Hexagonal boundaries and feature slices | PASS | PASS | Domain and Application untouched. Infrastructure: lockout defaults and lockout/login events beside the Identity adapters that already call `AccessFailedAsync`. Api (composition root): HTTP-only concerns — forwarded headers, rate-limit policies, `429` writer, recovery address limiter used by the forgot-password endpoint. `Program.cs` gains only registration and middleware lines. |
-| IV. Deliberate simplicity and dependency control | PASS | PASS | Framework middleware for limits and forwarded headers; no package, no custom limiter algorithm, no store, no abstraction port. Two small options types and one limiter wrapper with a current consumer each. |
+| IV. Deliberate simplicity and dependency control | PASS | PASS | Framework middleware for limits and forwarded headers; no package, no custom limiter algorithm, no store, no abstraction port. Three small settings types and one limiter wrapper with a current consumer each. |
 | V. Security by construction | PASS | PASS | Lockout is Identity's own; no custom counter. Effective address only from trusted hops. `429` reveals no account data. Events carry user IDs, causes and addresses, never passwords, tokens, cookies, reset tokens, keys or SMTP credentials. Invalid limit or proxy settings fail fast. Cookie and origin controls unchanged. |
 | VI. Tests of implemented behavior | PASS | PASS | [quickstart.md](quickstart.md): consolidated integration scenarios on real Identity/SQLite, deterministic lockout expiry, no sleeps in the automated suite, host-level configuration tests (defaults, overrides, fail-fast; the Api project is the composition root and is already referenced only by integration tests), Compose acceptance with forged headers and the reference proxy, Phase 1–6 regression. |
 | VII. Persistence ownership and deployment integrity | PASS | PASS | No schema or storage change; counters in memory; forwarded headers trusted only from authorized proxies/networks; proxy protection does not replace lockout or application limits; `compose.yml` keeps three services. |
@@ -146,6 +146,7 @@ docs/reference-proxy/nginx.conf                                        # new: re
 docs/phase-7-operations.md                                             # new: settings, proxy contract, Gate G7 evidence
 tests/Authentication.IntegrationTests/Infrastructure/AuthenticationApiFactory.cs   # lifted default limits, address filter
 tests/Authentication.IntegrationTests/Infrastructure/TestConnectionAddressStartupFilter.cs  # new, test-only
+tests/Authentication.IntegrationTests/Infrastructure/CountingPasswordHasher.cs    # new, test-only hasher decorator
 tests/Authentication.IntegrationTests/Scenarios/AccountLockoutTests.cs            # new
 tests/Authentication.IntegrationTests/Scenarios/RateLimitingTests.cs              # new
 tests/Authentication.IntegrationTests/Scenarios/ForwardedHeadersTests.cs          # new
@@ -155,6 +156,7 @@ tests/Authentication.IntegrationTests/Scenarios/SecretExposureTests.cs          
 tests/Authentication.IntegrationTests/Scenarios/SecurityConfigurationTests.cs     # new: defaults, overrides, fail-fast
 tests/acceptance/compose.reference-proxy.yml                                      # new, acceptance only
 tests/acceptance/phase-7.sh                                                       # new
+tests/acceptance/phase-{1..6}.sh                                                  # export generous AUTH_RATE_LIMIT_* for regression
 ```
 
 ## Project Structure
