@@ -185,7 +185,7 @@ public sealed class PasswordChangeSessionRevocationTests
     private static Task<HttpResponseMessage> RefreshAsync(HttpClient client, string cookie, CancellationToken cancellationToken) =>
         client.SendAsync(AuthenticationApiFactory.CreateBrowserRequest(HttpMethod.Post, "/api/auth/refresh", cookie), cancellationToken);
 
-    private static async Task<RenewableSessionFamily> FamilyOfAsync(AuthenticationApiFactory factory, string cookie, CancellationToken cancellationToken)
+    internal static async Task<RenewableSessionFamily> FamilyOfAsync(AuthenticationApiFactory factory, string cookie, CancellationToken cancellationToken)
     {
         Assert.True(RefreshCredentialProtector.TryHash(cookie, out var hash));
         using var scope = factory.Services.CreateScope();

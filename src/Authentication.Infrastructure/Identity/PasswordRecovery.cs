@@ -2,7 +2,9 @@ using System.Data;
 using System.Diagnostics;
 using System.Text;
 using Authentication.Application.Features.PasswordRecovery;
+using Authentication.Domain.Sessions;
 using Authentication.Infrastructure.Persistence;
+using Authentication.Infrastructure.Sessions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
@@ -59,7 +61,14 @@ public sealed partial class PasswordRecovery(
             return Map(reset);
         }
 
+        // A reset ends every renewable session; no session is kept. A failure here rolls back the new
+        // password too, so success is never reported while a session could still renew.
+        var now = timeProvider.GetUtcNow();
+        var revoked = await SessionFamilyRevocation.RevokeActiveAsync(
+            context, user.Id, now, SessionRevocationReason.PasswordReset, keepFamilyId: null, cancellationToken);
+
         await transaction.CommitAsync(cancellationToken);
+        LogPasswordReset(logger, user.Id, revoked, now, Activity.Current?.TraceId.ToString(), Activity.Current?.SpanId.ToString());
 
         return ResetPasswordOutcome.Reset;
     }
@@ -96,4 +105,7 @@ public sealed partial class PasswordRecovery(
 
     [LoggerMessage(LogLevel.Information, "PasswordResetRequested: reset token issued for user {UserId} at {OccurredAtUtc:O}; trace {TraceId}, span {SpanId}.")]
     private static partial void LogResetRequested(ILogger logger, string userId, DateTimeOffset occurredAtUtc, string? traceId, string? spanId);
+
+    [LoggerMessage(LogLevel.Information, "PasswordReset: password reset for user {UserId}; {RevokedCount} renewable session families revoked at {OccurredAtUtc:O}; trace {TraceId}, span {SpanId}.")]
+    private static partial void LogPasswordReset(ILogger logger, string userId, int revokedCount, DateTimeOffset occurredAtUtc, string? traceId, string? spanId);
 }
