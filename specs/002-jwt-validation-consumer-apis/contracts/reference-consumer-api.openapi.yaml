@@ -1,0 +1,99 @@
+openapi: 3.1.0
+info:
+  title: Reference Consumer API (api-a / api-b) — Phase 2
+  version: 1.0.0-phase2
+  description: >-
+    Planning contract for the minimal reference consumer deployed as Business API A and
+    Business API B. It demonstrates local RS256 access-token validation and role-based
+    authorization only; it excludes business capability and all later-phase behavior.
+    Authentication API contracts from Phase 1 are unchanged.
+paths:
+  /api/caller:
+    get:
+      operationId: getCaller
+      summary: Report the authenticated caller identity
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Token validated locally
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallerIdentity'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/caller/administrator:
+    get:
+      operationId: getAdministratorCaller
+      summary: Report the caller identity when the Administrator role is present
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Token validated locally and caller has the Administrator role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallerIdentity'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Authenticated caller lacks the Administrator role; no body
+  /health/live:
+    get:
+      operationId: getConsumerLiveness
+      summary: Report process liveness
+      security: []
+      responses:
+        '200':
+          description: Process is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    const: healthy
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >-
+        RS256 access token issued by Authentication API. Validated locally against the
+        configured public key, issuer, shared audience, and expiry with an explicit clock
+        tolerance; no call is made to Authentication API.
+  schemas:
+    CallerIdentity:
+      type: object
+      required: [service, subject, roles]
+      properties:
+        service:
+          type: string
+          description: Configured instance name, for example api-a or api-b.
+        subject:
+          type: string
+          description: Value of the token sub claim.
+        roles:
+          type: array
+          items:
+            type: string
+          description: All role claim values; empty when the token carries none.
+      example:
+        service: api-a
+        subject: 7f0b4a3e-5c1d-4e8a-9b6f-0a1c2d3e4f02
+        roles: [Administrator]
+  responses:
+    Unauthorized:
+      description: >-
+        Missing, malformed, forged, expired, wrong-issuer, wrong-audience, or wrong-algorithm
+        token. No body; the WWW-Authenticate header is `Bearer` without error description.
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+          example: Bearer
