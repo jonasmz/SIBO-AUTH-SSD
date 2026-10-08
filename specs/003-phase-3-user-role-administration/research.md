@@ -26,19 +26,31 @@ joins without value (Technical Constraints §5.4).
 
 ## Disabled-Account Login Refusal
 
-**Decision**: `IdentityCredentialValidator` keeps its Phase 1 flow and checks `IsEnabled` only
-after the normal password verification and failure accounting. A disabled account with the
-correct password returns `null`, which yields the existing generic `401`. Its failed-attempt
-counter is not reset.
+**Decision**: `IdentityCredentialValidator` checks `IsEnabled` only after the normal password
+verification and failure accounting. A disabled account with the correct password returns `null`,
+which yields the existing generic `401`. Its failed-attempt counter is not reset.
 
-**Rationale**: FR-LOGIN-012/013/015 and NFR-SEC-ENUM-001/004 require the same result and no
-practical timing difference. Checking after verification means a disabled account spends the same
-hashing work as a wrong password or a valid login. Lockout stays Identity's own mechanism
+The locked-out branch from Phase 1 currently returns before any hashing work. It now also performs
+one password-hasher verification of equivalent cost before returning `null`, as the unknown-email
+branch already does. All four refusal cases from FR-LOGIN-012 (unknown email, wrong password,
+locked, disabled) therefore spend one hash verification. The locked branch still does not count a
+failed attempt and does not reveal anything; only its cost changes. The verification compares
+against the user's stored hash with the presented password and its result is ignored. It must not
+call `CheckPasswordAsync`, which could trigger rehash or lockout side effects.
+
+**Rationale**: FR-009 explicitly requires disabled-account refusals to be indistinguishable in
+timing from locked accounts (FR-LOGIN-012/013/015, NFR-SEC-ENUM-001/004). Once disabled accounts
+do hash work, the remaining fast path is the locked branch. Fixing it in the phase that introduces
+the comparison follows Constitution II: the defect is corrected where the requirement applies,
+and the external contract does not change. Lockout stays Identity's own mechanism
 (FR-LOGIN-005/006). The login request, response, and token contract do not change (FR-020).
 
-**Alternatives considered**: Early return before password verification creates a measurable fast
-path. `SignInManager.CanSignInAsync` with a custom `IUserConfirmation` brings in SignInManager for
-one boolean.
+**Alternatives considered**: Early return for disabled accounts creates a second measurable fast
+path. Accepting the locked fast path as out of scope contradicts FR-009's explicit list.
+`SignInManager.CanSignInAsync` with a custom `IUserConfirmation` brings in SignInManager for one
+boolean. Timing parity is verified by code structure, with every refusal branch performing exactly
+one hasher verification, and by review. A wall-clock timing test would be flaky and is not used
+(Constitution VI forbids invented performance targets).
 
 ## Administrative Token Validation in Authentication API
 
@@ -129,6 +141,13 @@ last-administrator invariant to hold under concurrent requests. Authentication A
 owns its single SQLite file (Constitution VII), so the database write lock is a complete
 serialization point without an in-process lock or new infrastructure.
 
+**Busy handling**: Waiting writers rely on Microsoft.Data.Sqlite's default behavior. It retries
+`SQLITE_BUSY` until the default command timeout of 30 seconds, and the connection string sets no
+override. Administrative transactions are short, so a waiter acquires the lock long before that.
+Only a genuinely stuck database would exceed it. The exceeded case surfaces as a `DbException`,
+which maps to `503`. That is never a valid outcome of the concurrent scenario test, which must
+observe exactly `200` and `409`.
+
 **Alternatives considered**: An in-process `SemaphoreSlim` duplicates what SQLite already
 guarantees and would not cover a second process. Optimistic concurrency stamps on every user still
 allow the cross-row case, where two different administrators are disabled at once. A
@@ -214,7 +233,18 @@ counts, `LockoutEnabled`, security stamp, password hash, concurrency stamp, phon
 two-factor fields are not exposed.
 
 **Rationale**: FR-USER-004 ("lockout state when pertinent") and FR-USER-005. The spec assumption
-fixes the meaning. `TimeProvider` keeps it deterministic in tests (Technical Constraints §11).
+fixes the meaning. The projection uses the injected `TimeProvider` (Technical Constraints §11),
+which is `TimeProvider.System` at runtime.
+
+**Clock consistency**: Identity 10 computes and checks lockout with the system clock, because
+`Microsoft.Extensions.Identity.Core` 10.0.12 has no `TimeProvider` hook. JwtBearer also validates
+token lifetime against the system clock. Any host that issues tokens for administrative calls, or
+whose view of lockout is asserted, must therefore run on the system clock. The lockout and
+administrative scenarios use the default `AuthenticationApiFactory` clock, `TimeProvider.System`.
+They assert `isLockedOut = true` and a `lockoutEndUtc` later than the request time, immediately
+after the failures that trigger the lockout. They do not advance the clock. A
+`ControlledTimeProvider` remains valid only for the existing Phase 1 issuance tests, which never
+call administrative endpoints.
 
 ## Dependencies
 
@@ -239,9 +269,13 @@ library.
 - **Test support**: `TestTokenMinter` gains a constructor that signs with the Authentication API
   test key, so expired, wrong-issuer, and wrong-audience tokens can be minted with the correct
   signature.
+- **Test support**: `AdminTestSupport` holds the shared login, admin-token, and create-user helpers
+  for the four Phase 3 scenario classes, so they are not duplicated.
 - **Acceptance**: `tests/acceptance/phase-3.sh` drives the admin workflow on disposable Compose
-  storage, restarts `auth-api` to show persistence, and ends by running `phase-2.sh`, which runs
-  `phase-1.sh`.
+  storage and restarts `auth-api` to show persistence. It then scans the `auth-api` logs for the
+  passwords used, every issued access token, and `PRIVATE KEY` (NFR-002), which must be absent. It
+  ends by running `phase-2.sh`, which runs `phase-1.sh`, after `docker compose down -v` and with
+  its own variables unset, as `phase-2.sh` does.
 
 **Rationale**: NFR-001, Constitution VI, and Roadmap §9.4/G3. Concurrency is proven against real
 SQLite locking rather than simulated.

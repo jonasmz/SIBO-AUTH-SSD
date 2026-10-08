@@ -34,15 +34,16 @@ dotnet build Authentication.slnx
 dotnet test --solution Authentication.slnx
 ```
 
-**Expected**: all tests pass, including the unchanged Phase 1 and Phase 2 scenario classes. The
+**Expected**: all tests pass, including the Phase 1 and Phase 2 scenario classes with their assertions unchanged (only a
+`UserManager` type reference changes in the two bootstrap classes). The
 Phase 3 scenarios prove:
 
 | Scenario | Proves |
 |---|---|
 | Administrative access | no token / forged / expired beyond tolerance / wrong issuer / wrong audience / non-RS256 → `401` problem with `WWW-Authenticate: Bearer`; real non-admin token → `403` problem; admin token → `200` on all eleven operations |
-| User lifecycle | create (`201`, default enabled), duplicate email by case → `409`, weak password → `400`, list/get show only permitted fields, email update changes the login email, extra attribute in `PATCH` → `400`, unknown id → `404`, disable → login `401` identical to wrong password, enable → login `200` with the unchanged password |
+| User lifecycle | create (`201`, default enabled), duplicate email by case → `409`, weak password → `400`, list/get show only permitted fields, email update changes the login email, extra attribute in `PATCH`, `PATCH {}`, malformed JSON, or non-JSON content type → `400`, unknown id → `404`, disable → login `401` identical to wrong password, enable → login `200` with the unchanged password, lockout visible in the view right after repeated failures (system clock) |
 | Roles and assignments | create, duplicate (case-insensitive) → `409`, `PUT` roles replaces the set and the next login's token carries exactly those roles, a nonexistent role → `400` with nothing applied, rename keeps assignments and new tokens carry the new name, delete unassigned → `204`, delete assigned → `409`, an old token keeps its original roles |
-| Administrator continuity | sole enabled admin: disable / remove `Administrator` / rename or delete `Administrator` → `409` with no change; a disabled second admin does not count; with two enabled admins, one can be disabled; two concurrent disables of two admins → exactly one `200` and one `409` |
+| Administrator continuity | sole enabled admin: disable / remove `Administrator` / rename or delete `Administrator` → `409` with no change; a disabled second admin does not count; with two enabled admins, one can be disabled; two concurrent disables of two admins → exactly one `200` and one `409` (never `503`) |
 | Unit | `AdministratorContinuity` truth table; `Jwt:ClockSkewSeconds` bounds |
 
 ## 3. Compose Demonstration
@@ -64,7 +65,10 @@ The script uses disposable host directories and a dedicated Compose project, the
 6. Shows that disabling the sole enabled administrator returns `409`.
 7. Restarts `auth-api` and shows that the user, its email, and its enabled state persisted and
    that the administrator was not re-created.
-8. Runs `tests/acceptance/phase-2.sh`, which also runs `phase-1.sh`, as regression.
+8. Scans `docker compose logs auth-api` for the passwords used, every issued access token, and
+   `PRIVATE KEY`. None may appear (NFR-002).
+9. Runs `docker compose down -v`, then runs `tests/acceptance/phase-2.sh` with its own variables
+   unset. That script also runs `phase-1.sh`, as regression.
 
 **Expected**: every step prints `PASS` and the script exits `0`.
 
@@ -84,8 +88,8 @@ curl -s -X PATCH localhost:8080/api/admin/users/<id> -H "Authorization: Bearer $
 build        PASS   (step 1, 0 warnings)
 tests        PASS   (step 2)
 startup      PASS   (step 3.1, migration applied)
-feature      PASS   (steps 3.2–3.7)
-regression   PASS   (step 3.8 + Phase 1–2 test classes)
+feature      PASS   (steps 3.2–3.8)
+regression   PASS   (step 3.9 + Phase 1–2 test classes)
 ```
 
 Also confirm: no refresh, session, revocation, password-reset, or email artifacts exist. Record

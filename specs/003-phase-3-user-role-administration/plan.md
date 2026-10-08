@@ -38,9 +38,9 @@ referenced by Authentication.Infrastructure (Technical Constraints §33); Micros
 `AspNetUsers.IsEnabled` (existing rows → enabled). No new table or index.
 
 **Testing**: xUnit.net v3 on Microsoft Testing Platform. `WebApplicationFactory` with temporary
-SQLite files, real Identity, real JwtBearer, and real login-issued tokens. `TestTokenMinter`
-signs with the test key for negative cases. A controlled `TimeProvider` checks lockout state. No
-sleeps, mocks, or new test project. `tests/acceptance/phase-3.sh` runs on disposable Compose
+SQLite files, real Identity, real JwtBearer, and real login-issued tokens, all on the system
+clock, which Identity lockout and JwtBearer use. `TestTokenMinter` signs with the test key for
+negative cases. No sleeps, mocks, or new test project. `tests/acceptance/phase-3.sh` runs on disposable Compose
 storage.
 
 **Target Platform**: Linux containers from official .NET 10 images, non-root. Docker Compose with
@@ -133,7 +133,9 @@ Key outcomes:
    migration default edited to `true`. `DatabaseInitializer` creates the administrator with
    `IsEnabled = true`.
 5. **Login**: `IdentityCredentialValidator` adds the `IsEnabled` check after the successful
-   password check and returns `null` when disabled. Nothing else changes.
+   password check and returns `null` when disabled. The locked-out branch now performs one
+   equivalent-cost hasher verification before returning `null`, without counting a failure, so
+   every refusal branch costs one hash (FR-009). The response contract is unchanged.
 6. **User administration** (`UserAdministration`):
    - `List` and `Find` project to `UserView`, including lockout computed from `TimeProvider` and
      sorted role names.
@@ -185,7 +187,9 @@ file:
    - Disable → login `401`, with body and status equal to a wrong-password login. Idempotent
      disable. Enable → login `200` with the same password. The roles and email survive. A user
      created disabled cannot log in.
-   - Lockout is shown in the view after repeated failures, under a controlled clock.
+   - Lockout is shown in the view (`isLockedOut`, future `lockoutEndUtc`) right after repeated
+     failures, on the system clock.
+   - Malformed JSON, a non-JSON content type, and `PATCH {}` each return `400`.
 3. **`RoleAdministrationTests`**:
    - Create a role. A case-variant duplicate → `409`.
    - `PUT` roles → the next login token has exactly those role claims. An earlier token still
@@ -194,6 +198,7 @@ file:
      → `400` and roles unchanged.
    - Rename keeps assignments and new tokens carry the new name. A colliding rename → `409`.
    - Delete unassigned → `204`. Delete assigned → `409`. Unknown id → `404`.
+   - `PUT` roles without the `roles` member, and `POST` roles with a blank name → `400`.
 4. **`AdministratorContinuityTests`**:
    - With the sole enabled admin, these return `409` with no change: disable self; `PUT` roles
      without `Administrator`; rename or delete the `Administrator` role.
@@ -202,19 +207,22 @@ file:
      be.
    - A locked-out admin still counts as enabled.
    - Concurrency: with exactly two enabled admins, two simultaneous disable requests, one per
-     admin, give exactly one `200` and one `409`, and one enabled admin remains.
+     admin, give exactly one `200` and one `409`, never `503`, and one enabled admin remains.
+     Waiters rely on Microsoft.Data.Sqlite's default 30-second busy retry.
 
 Unit tests: an `AdministratorContinuity` truth table, and `Jwt:ClockSkewSeconds` accepted 0–60
 and rejected otherwise.
 
 Regression: the existing `BootstrapAndHealthTests`, `BootstrapLifecycleTests`, `LoginAndJwtTests`,
-and `ConsumerValidationTests` run unchanged. Only test infrastructure changes:
-`AuthenticationApiFactory` sets `Jwt__ClockSkewSeconds`, and `TestTokenMinter` gains a constructor
-that accepts an existing private PEM. The migration-on-existing-database case is covered by
+and `ConsumerValidationTests` keep their assertions unchanged. The only edits are the
+`UserManager<ApplicationUser>` type references in the two bootstrap classes (T008) and test
+infrastructure: `AuthenticationApiFactory` sets `Jwt__ClockSkewSeconds`, and `TestTokenMinter`
+gains a constructor that accepts an existing private PEM. The migration-on-existing-database case is covered by
 `BootstrapLifecycleTests`, which restarts on the same file.
 
-Acceptance: `tests/acceptance/phase-3.sh` as described in [quickstart.md](quickstart.md), ending
-with `phase-2.sh` (→ `phase-1.sh`).
+Acceptance: `tests/acceptance/phase-3.sh` as described in [quickstart.md](quickstart.md). It
+includes an `auth-api` log scan for passwords, access tokens, and `PRIVATE KEY` (NFR-002), and
+ends with `phase-2.sh` (→ `phase-1.sh`) after `docker compose down -v`.
 
 ## Project Structure
 
@@ -261,7 +269,7 @@ src/
 │   ├── DependencyInjection.cs                # + clock skew, JwtBearer, policy, admin adapters
 │   ├── Identity/
 │   │   ├── ApplicationUser.cs                # new
-│   │   ├── IdentityCredentialValidator.cs    # + IsEnabled check
+│   │   ├── IdentityCredentialValidator.cs    # + IsEnabled check; locked branch does equal hash work
 │   │   ├── RoleAdministration.cs             # new
 │   │   └── UserAdministration.cs             # new
 │   ├── Persistence/
@@ -297,6 +305,7 @@ tests/
 │   └── Infrastructure/JwtOptionsTests.cs     # + clock skew bounds (via configuration validation)
 ├── Authentication.IntegrationTests/
 │   ├── Infrastructure/
+│   │   ├── AdminTestSupport.cs               # new: shared login/admin-token/create-user helpers
 │   │   ├── AuthenticationApiFactory.cs       # + Jwt__ClockSkewSeconds
 │   │   └── TestTokenMinter.cs                # + ctor from existing private PEM
 │   └── Scenarios/

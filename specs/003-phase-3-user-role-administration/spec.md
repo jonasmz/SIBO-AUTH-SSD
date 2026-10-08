@@ -212,14 +212,14 @@ first can be disabled.
   a reference to a nonexistent role MUST cause the whole operation to be rejected as an invalid
   request with no part applied, and an unknown user MUST yield `404 Not Found`.
 - **FR-016**: The system MUST NOT allow the last enabled administrator — the only enabled user
-  holding the `Administrator` role — to be disabled, nor to lose the `Administrator` role, by any
-  operation or combination of operations; each refused operation MUST leave the state unchanged and
-  return a state-conflict outcome. Disabled users do not count as administrators.
+  holding the `Administrator` role — to be disabled, nor to lose the `Administrator` role; each
+  refused operation MUST leave the state unchanged and return a state-conflict outcome. Disabled
+  users do not count as administrators.
 - **FR-017**: The canonical `Administrator` role MUST NOT be deleted or renamed while the system
   depends on it for administration, and no role operation may bypass FR-016.
 - **FR-018**: The invariants in FR-016 and FR-017 MUST hold regardless of which administrator
-  account performs the operation, including operations on the acting account, and under concurrent
-  administrative requests.
+  account performs the operation, including operations on the acting account, by any operation or
+  combination of operations, and under concurrent administrative requests.
 - **FR-019**: Newly issued access tokens MUST reflect the user's roles at the time of issuance.
   Changes to roles or to the enabled state MUST NOT alter access tokens already issued and MUST NOT
   introduce token blacklists, remote validation, or session state.
