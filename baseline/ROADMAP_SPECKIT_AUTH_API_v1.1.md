@@ -224,7 +224,7 @@ Una fase sólo podrá marcarse `[x]` cuando se hayan cumplido todos sus criterio
 | Fase | Capacidad | Estado | Dependencia | Gate |
 |---|---|---|---|---|
 | 1 | Bootstrap + Identity + Admin + Login + JWT | `[x]` | Ninguna | `G1` |
-| 2 | Validación JWT en APIs consumidoras | `[ ]` | Phase 1 | `G2` |
+| 2 | Validación JWT en APIs consumidoras | `[x]` | Phase 1 | `G2` |
 | 3 | Administración de usuarios y roles | `[ ]` | Phase 1-2 | `G3` |
 | 4 | Refresh tokens + sesiones + logout | `[ ]` | Phase 1-3 | `G4` |
 | 5 | Cambio de contraseña | `[ ]` | Phase 1-4 | `G5` |
@@ -550,14 +550,14 @@ No implementar:
 
 ## 8.5 Criterio de salida — Gate G2
 
-- [ ] Ambas APIs validan JWT localmente.
-- [ ] Ambas APIs rechazan tokens incorrectos.
-- [ ] Autorización por rol demostrada.
-- [ ] Auth API puede estar temporalmente indisponible y un JWT vigente sigue siendo validable.
-- [ ] Build PASS.
-- [ ] Tests PASS.
-- [ ] Regression Phase 1 PASS.
-- [ ] Commit de cierre creado.
+- [x] Ambas APIs validan JWT localmente.
+- [x] Ambas APIs rechazan tokens incorrectos.
+- [x] Autorización por rol demostrada.
+- [x] Auth API puede estar temporalmente indisponible y un JWT vigente sigue siendo validable.
+- [x] Build PASS.
+- [x] Tests PASS.
+- [x] Regression Phase 1 PASS.
+- [x] Commit de cierre creado.
 
 ---
 
@@ -1468,7 +1468,7 @@ Actualizar esta sección al finalizar cada sesión relevante.
 | Fecha | Fase | Estado | Cambio principal | Tests | Commit | Observaciones |
 |---|---|---|---|---|---|---|
 | 2026-10-07 | Phase 1 | Complete — G1 approved | Bootstrap, Identity, admin inicial, login por email, JWT RS256, health live/ready y persistencia SQLite/RSA fuera del ciclo de vida de Compose | Build 0 warnings; 19/19 tests; `tests/acceptance/phase-1.sh` ALL PASS | Commit de cierre `[Phase 1] Close Gate G1` | Aprobación explícita de G1 por el responsable del proyecto el 2026-10-07; evidencia en `docs/phase-1-operations.md`; reemplazo de la contraseña `admin` pendiente de Phase 5 |
-| — | Phase 2 | Pending | — | — | — | — |
+| 2026-10-08 | Phase 2 | Complete — G2 approved | Validación JWT local en API A y API B (consumidor de referencia `ReferenceConsumer.Api` desplegado como `api-a`/`api-b`), rechazo `401`, autorización por rol `403`, clave pública únicamente, disponibilidad con Auth API detenida | Build 0 warnings; 31/31 tests; `tests/acceptance/phase-2.sh` ALL PASS (incluye regresión `phase-1.sh`) | Commit de cierre `[Phase 2] Close Gate G2` | Aprobación explícita de G2 por el responsable del proyecto el 2026-10-08; evidencia en `docs/phase-2-operations.md`; autorizado por DEC-009 y la enmienda 1.1 de Technical Constraints §5.2; proxy, frontend y no exposición directa de backends permanecen en Phase 8 |
 | — | Phase 3 | Pending | — | — | — | — |
 | — | Phase 4 | Pending | — | — | — | — |
 | — | Phase 5 | Pending | — | — | — | — |
@@ -1654,8 +1654,9 @@ SRS baseline: v1.1
 SRS available: YES
 Implementation started: YES
 Phase 1: COMPLETE (Gate G1 approved 2026-10-07)
-Current phase: Phase 2
-Current gate: G2
+Phase 2: COMPLETE (Gate G2 approved 2026-10-08)
+Current phase: Phase 3
+Current gate: G3
 ```
 
 ## Próxima acción
@@ -1663,8 +1664,8 @@ Current gate: G2
 Preparar la especificación Spec-Kit correspondiente a:
 
 ```text
-Phase 2
-Validación JWT en APIs consumidoras
+Phase 3
+Administración de usuarios y roles
 ```
 
-asegurando que `spec.md`, `plan.md` y `tasks.md` no incorporen refresh tokens, administración de usuarios, recuperación de contraseña ni otras capacidades pertenecientes a fases posteriores.
+asegurando que `spec.md`, `plan.md` y `tasks.md` no incorporen refresh tokens, recuperación de contraseña ni otras capacidades pertenecientes a fases posteriores.
