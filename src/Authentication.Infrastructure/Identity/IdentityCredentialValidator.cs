@@ -4,10 +4,10 @@ using Microsoft.AspNetCore.Identity;
 namespace Authentication.Infrastructure.Identity;
 
 public sealed class IdentityCredentialValidator(
-    UserManager<IdentityUser<string>> userManager,
-    IPasswordHasher<IdentityUser<string>> passwordHasher) : IIdentityCredentialValidator
+    UserManager<ApplicationUser> userManager,
+    IPasswordHasher<ApplicationUser> passwordHasher) : IIdentityCredentialValidator
 {
-    private static readonly IdentityUser<string> DummyUser = new() { Id = "dummy", UserName = "dummy" };
+    private static readonly ApplicationUser DummyUser = new() { Id = "dummy", UserName = "dummy" };
 
     public async Task<AuthenticatedIdentity?> ValidateAsync(
         string email,

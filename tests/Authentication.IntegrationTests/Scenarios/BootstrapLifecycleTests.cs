@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
+using Authentication.Infrastructure.Identity;
 using Authentication.Infrastructure.Persistence;
 using Authentication.IntegrationTests.Infrastructure;
 using Microsoft.AspNetCore.Identity;
@@ -26,7 +27,7 @@ public sealed class BootstrapLifecycleTests
         {
             using var client = first.CreateClient();
             using var scope = first.Services.CreateScope();
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser<string>>>();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
             var admin = await userManager.FindByIdAsync(DatabaseInitializer.AdministratorUserId);
             Assert.NotNull(admin);
 
@@ -57,7 +58,7 @@ public sealed class BootstrapLifecycleTests
 
             using var scope = second.Services.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<AuthenticationDbContext>();
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser<string>>>();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
             var role = Assert.Single(await context.Roles.ToListAsync(cancellationToken));
             Assert.Equal(DatabaseInitializer.AdministratorRoleId, role.Id);

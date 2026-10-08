@@ -26,7 +26,8 @@ public static class DependencyInjection
             Audience = configuration[$"{JwtOptions.SectionName}:Audience"] ?? string.Empty,
             AccessTokenLifetimeMinutes = ParseLifetime(
                 configuration[$"{JwtOptions.SectionName}:AccessTokenLifetimeMinutes"]),
-            PrivateKeyPath = configuration[$"{JwtOptions.SectionName}:PrivateKeyPath"] ?? string.Empty
+            PrivateKeyPath = configuration[$"{JwtOptions.SectionName}:PrivateKeyPath"] ?? string.Empty,
+            ClockSkewSeconds = ParseClockSkew(configuration[$"{JwtOptions.SectionName}:ClockSkewSeconds"])
         };
         var sqliteOptions = new SqliteOptions
         {
@@ -42,6 +43,8 @@ public static class DependencyInjection
         services.AddSingleton<DatabaseInitializer>();
         services.AddSingleton<SqliteHealthCheck>();
 
+        services.AddSingleton<RsaSigningKey>();
+        services.AddAdministrativeAuthentication();
         services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
         services.AddScoped<IIdentityCredentialValidator, IdentityCredentialValidator>();
         services.AddScoped<LoginHandler>();
@@ -49,7 +52,7 @@ public static class DependencyInjection
         services.AddDbContext<AuthenticationDbContext>(options =>
             options.UseSqlite(sqliteOptions.ConnectionString));
 
-        services.AddIdentityCore<IdentityUser<string>>(options =>
+        services.AddIdentityCore<ApplicationUser>(options =>
             {
                 options.User.RequireUniqueEmail = true;
                 options.Password.RequiredLength = 5;
@@ -85,12 +88,18 @@ public static class DependencyInjection
         return int.TryParse(value, out var lifetime) ? lifetime : 0;
     }
 
+    private static int ParseClockSkew(string? value)
+    {
+        return int.TryParse(value, out var seconds) ? seconds : -1;
+    }
+
     private static void Validate(JwtOptions jwtOptions, SqliteOptions sqliteOptions)
     {
         Require(!string.IsNullOrWhiteSpace(sqliteOptions.ConnectionString), $"{SqliteOptions.SectionName}:ConnectionString");
         Require(!string.IsNullOrWhiteSpace(jwtOptions.Issuer), $"{JwtOptions.SectionName}:Issuer");
         Require(!string.IsNullOrWhiteSpace(jwtOptions.Audience), $"{JwtOptions.SectionName}:Audience");
         Require(jwtOptions.AccessTokenLifetimeMinutes > 0, $"{JwtOptions.SectionName}:AccessTokenLifetimeMinutes");
+        Require(jwtOptions.ClockSkewSeconds is >= 0 and <= 60, $"{JwtOptions.SectionName}:ClockSkewSeconds");
 
         var keySetting = $"{JwtOptions.SectionName}:PrivateKeyPath";
         Require(!string.IsNullOrWhiteSpace(jwtOptions.PrivateKeyPath), keySetting);

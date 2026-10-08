@@ -36,7 +36,20 @@ public sealed class TestTokenMinter : IDisposable
     public const string DefaultIssuer = "https://auth-api.test";
     public const string DefaultAudience = "authentication-api-tests";
 
-    private readonly RSA _rsa = RSA.Create(3072);
+    private readonly RSA _rsa;
+
+    /// <summary>Creates a minter with a fresh disposable key pair.</summary>
+    public TestTokenMinter()
+    {
+        _rsa = RSA.Create(3072);
+    }
+
+    /// <summary>Creates a minter that signs with an existing private key, for example the Authentication API test key.</summary>
+    public TestTokenMinter(string privateKeyPem)
+    {
+        _rsa = RSA.Create();
+        _rsa.ImportFromPem(privateKeyPem);
+    }
 
     public string PublicKeyPem => _rsa.ExportSubjectPublicKeyInfoPem();
 
