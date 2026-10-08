@@ -48,7 +48,7 @@ Requires `docker compose`, `openssl`, `curl`, `jq`.
 | State | Evidence | Result |
 |---|---|---|
 | Build | `dotnet build` | PASS, 0 warnings, 0 errors |
-| Tests | `dotnet test` | PASS, 103 of 103 (unit and integration) |
+| Tests | `dotnet test` | PASS, 104 of 104 (unit and integration) |
 | Startup | `phase-4.sh`: Compose stack ready, migration applied, restart keeps state | PASS |
 | Feature | `phase-4.sh`: login cookie, Origin boundary, rotation, replay, concurrent refresh, logout, admin revocation, disablement, local consumer validation, secret-free logs with revocation events | PASS |
 | Regression | `phase-4.sh` finishing with `phase-3.sh` → `phase-2.sh` → `phase-1.sh` | PASS (all four report ALL PASS) |

@@ -285,3 +285,8 @@ Task: "Add Origin-protection scenarios in tests/Authentication.IntegrationTests/
   of logs, contracts, and assertions.
 - Do not create `plan.md` changes, frontend work, a second database, a migration container,
   centralized JWT validation, or future password-workflow components.
+
+## Phase 10: Convergence
+
+- [X] T054 Make configured-origin matching consistent with its startup validation in `src/Authentication.Api/Features/Sessions/BrowserOriginValidator.cs`: `RefreshSessionOptions.HasValidFrontendOrigin` accepts values such as `https://app.example/`, mixed-case hosts, or an explicit default port, but the Ordinal comparison against `Uri.GetLeftPart(Authority)` can never match them, so refresh and logout would return 403 permanently; compare the parsed canonical authority of both sides (or reject non-canonical values at startup), and extend `tests/Authentication.IntegrationTests/Scenarios/RefreshOriginProtectionTests.cs` with one case for a configured origin with a trailing slash per FR-011 (partial)
+- [X] T055 Remove the unused, unsupported `RevokeAllAsync` member (throws `NotSupportedException`) from `src/Authentication.Application/Features/Sessions/ISessionFamilyRevocation.cs` and `src/Authentication.Infrastructure/Sessions/RenewableSessionStore.cs`, since administrative and disablement revocation are implemented in `UserAdministration` per Scope Exclusions "no speculative abstractions" (unrequested)

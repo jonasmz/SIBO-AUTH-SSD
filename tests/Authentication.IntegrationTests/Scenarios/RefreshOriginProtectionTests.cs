@@ -31,6 +31,17 @@ public sealed class RefreshOriginProtectionTests
         Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
     }
 
+    [Fact]
+    public async Task ConfiguredOriginWithTrailingSlashAndMixedCaseStillMatchesTheBrowserOrigin()
+    {
+        using var factory = new AuthenticationApiFactory(frontendOrigin: "https://Frontend.test/");
+        using var client = factory.CreateClient();
+        var credential = await LoginAsync(client);
+
+        using var response = await client.SendAsync(AuthenticationApiFactory.CreateBrowserRequest(HttpMethod.Post, "/api/auth/refresh", credential), TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
     private static async Task<string> LoginAsync(HttpClient client)
     {
         using var response = await client.PostAsJsonAsync("/api/auth/login", new { email = "admin@local.invalid", password = "admin" }, TestContext.Current.CancellationToken);
