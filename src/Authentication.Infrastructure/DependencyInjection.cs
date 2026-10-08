@@ -51,6 +51,8 @@ public static class DependencyInjection
         services.AddSingleton<RefreshCredentialProtector>();
         services.AddScoped<IRenewableSessionStore, RenewableSessionStore>();
         services.AddScoped<IRefreshSessionRotation, RenewableSessionStore>();
+        services.AddScoped<IRefreshSessionLookup, RenewableSessionStore>();
+        services.AddScoped<ISessionFamilyRevocation, RenewableSessionStore>();
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<InitializationState>();
         services.AddSingleton<DatabaseInitializer>();
@@ -62,6 +64,7 @@ public static class DependencyInjection
         services.AddScoped<IIdentityCredentialValidator, IdentityCredentialValidator>();
         services.AddScoped<LoginHandler>();
         services.AddScoped<RefreshSessionHandler>();
+        services.AddScoped<LogoutSessionHandler>();
         services.AddScoped<IUserAdministration, UserAdministration>();
         services.AddScoped<IRoleAdministration, RoleAdministration>();
 

@@ -22,6 +22,7 @@ await app.Services.InitializeAuthenticationInfrastructureAsync();
 app.MapHealthEndpoints();
 app.MapLoginEndpoint();
 app.MapRefreshEndpoint();
+app.MapLogoutEndpoint();
 app.MapAdministrationEndpoints();
 
 await app.RunAsync();

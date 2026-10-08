@@ -144,15 +144,15 @@ after logout.
 
 ### Tests for User Story 4
 
-- [ ] T033 [P] [US4] Add logout integration scenarios for family revocation, matching expired cookie attributes, idempotent 204 behavior for all credential states, refresh rejection after logout, and persistence unavailability producing generic 503 ProblemDetails rather than false success in `tests/Authentication.IntegrationTests/Scenarios/LogoutTests.cs`.
-- [ ] T034 [P] [US4] Add logout Origin-protection scenarios for missing, malformed, opaque, mismatched, and configured Origin values in `tests/Authentication.IntegrationTests/Scenarios/LogoutOriginProtectionTests.cs`.
+- [X] T033 [P] [US4] Add logout integration scenarios for family revocation, matching expired cookie attributes, idempotent 204 behavior for all credential states, refresh rejection after logout, and persistence unavailability producing generic 503 ProblemDetails rather than false success in `tests/Authentication.IntegrationTests/Scenarios/LogoutTests.cs`.
+- [X] T034 [P] [US4] Add logout Origin-protection scenarios for missing, malformed, opaque, mismatched, and configured Origin values in `tests/Authentication.IntegrationTests/Scenarios/LogoutOriginProtectionTests.cs`.
 
 ### Implementation for User Story 4
 
-- [ ] T035 [US4] Add focused idempotent logout orchestration under `src/Authentication.Application/Features/Sessions/`, keeping `LogoutSessionHandler` and any command/outcome as one top-level type per matching file; revoke a known family with reason `Logout` while treating absent, malformed, unknown, expired, or already-revoked credentials as success.
-- [ ] T036 [US4] Implement known-family logout revocation and secret-free structured logout event logging with UTC event time and ambient `Activity` trace/span/correlation identifiers when available in `src/Authentication.Infrastructure/Sessions/RenewableSessionStore.cs`.
-- [ ] T037 [US4] Add matching expired `auth_refresh` cookie invalidation in `src/Authentication.Api/Features/Sessions/RefreshCookieWriter.cs`.
-- [ ] T038 [US4] Add `POST /api/auth/logout` mapping that validates Origin first, returns 204 and clears the cookie for every credential state, maps actual persistence unavailability to generic 503 ProblemDetails, and does not create JWT blacklist state in `src/Authentication.Api/Features/Sessions/LogoutEndpoint.cs`.
+- [X] T035 [US4] Add focused idempotent logout orchestration under `src/Authentication.Application/Features/Sessions/`, keeping `LogoutSessionHandler` and any command/outcome as one top-level type per matching file; revoke a known family with reason `Logout` while treating absent, malformed, unknown, expired, or already-revoked credentials as success.
+- [X] T036 [US4] Implement known-family logout revocation and secret-free structured logout event logging with UTC event time and ambient `Activity` trace/span/correlation identifiers when available in `src/Authentication.Infrastructure/Sessions/RenewableSessionStore.cs`.
+- [X] T037 [US4] Add matching expired `auth_refresh` cookie invalidation in `src/Authentication.Api/Features/Sessions/RefreshCookieWriter.cs`.
+- [X] T038 [US4] Add `POST /api/auth/logout` mapping that validates Origin first, returns 204 and clears the cookie for every credential state, maps actual persistence unavailability to generic 503 ProblemDetails, and does not create JWT blacklist state in `src/Authentication.Api/Features/Sessions/LogoutEndpoint.cs`.
 
 **Checkpoint**: US4 ends future renewal for the current family while already-issued access JWTs
 remain handled exclusively by normal local validation and expiry.
