@@ -1,4 +1,5 @@
 using Authentication.Application.Features.Login;
+using Authentication.Application.Features.Users;
 using Authentication.Infrastructure.Health;
 using Authentication.Infrastructure.Identity;
 using Authentication.Infrastructure.Persistence;
@@ -48,6 +49,7 @@ public static class DependencyInjection
         services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
         services.AddScoped<IIdentityCredentialValidator, IdentityCredentialValidator>();
         services.AddScoped<LoginHandler>();
+        services.AddScoped<IUserAdministration, UserAdministration>();
 
         services.AddDbContext<AuthenticationDbContext>(options =>
             options.UseSqlite(sqliteOptions.ConnectionString));
