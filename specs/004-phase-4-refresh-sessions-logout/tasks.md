@@ -67,15 +67,15 @@ one persistent renewable family whose raw credential exists only in a restrictiv
 
 ### Tests for User Story 1
 
-- [ ] T015 [P] [US1] Add consolidated login-session integration scenarios for successful family creation, unchanged access-token JSON shape, restrictive cookie attributes, and no session on failed/disabled/locked login in `tests/Authentication.IntegrationTests/Scenarios/RenewableLoginSessionTests.cs`.
-- [ ] T016 [P] [US1] Add integration assertions that `RefreshSession:LifetimeDays` defaults to seven, rejects non-positive or overflow-producing values, requires a syntactically valid absolute frontend origin, fails fast without disclosing configured values, and gives every login-issued family/credential the same absolute UTC expiry in `tests/Authentication.IntegrationTests/Scenarios/RefreshSessionConfigurationTests.cs`.
+- [X] T015 [P] [US1] Add consolidated login-session integration scenarios for successful family creation, unchanged access-token JSON shape, restrictive cookie attributes, and no session on failed/disabled/locked login in `tests/Authentication.IntegrationTests/Scenarios/RenewableLoginSessionTests.cs`.
+- [X] T016 [P] [US1] Add integration assertions that `RefreshSession:LifetimeDays` defaults to seven, rejects non-positive or overflow-producing values, requires a syntactically valid absolute frontend origin, fails fast without disclosing configured values, and gives every login-issued family/credential the same absolute UTC expiry in `tests/Authentication.IntegrationTests/Scenarios/RefreshSessionConfigurationTests.cs`.
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Implement the focused Auth-owned session issuance operation that creates a family and initial credential atomically before a successful response in `src/Authentication.Infrastructure/Sessions/RenewableSessionStore.cs`.
-- [ ] T018 [US1] Extend successful-login orchestration in `src/Authentication.Application/Features/Login/LoginHandler.cs` to request session issuance only after existing credential, enabled, and lockout checks pass, and extend `src/Authentication.Application/Features/Login/LoginOutcome.cs` to carry the issued opaque refresh value and absolute expiry to the API boundary without referencing HTTP, cookies, or ASP.NET Core types.
-- [ ] T019 [US1] Add browser-cookie creation with `auth_refresh`, `Path=/api/auth`, no Domain, `HttpOnly`, `SameSite=Strict`, absolute family expiry, and Production-only Secure behavior in `src/Authentication.Api/Features/Sessions/RefreshCookieWriter.cs`.
-- [ ] T020 [US1] Extend the login HTTP boundary to emit the refresh cookie while retaining the established `{ accessToken, expiresAtUtc }` body and generic credential failures in `src/Authentication.Api/Features/Login/LoginEndpoint.cs`.
+- [X] T017 [US1] Implement the focused Auth-owned session issuance operation that creates a family and initial credential atomically before a successful response in `src/Authentication.Infrastructure/Sessions/RenewableSessionStore.cs`.
+- [X] T018 [US1] Extend successful-login orchestration in `src/Authentication.Application/Features/Login/LoginHandler.cs` to request session issuance only after existing credential, enabled, and lockout checks pass, and extend `src/Authentication.Application/Features/Login/LoginOutcome.cs` to carry the issued opaque refresh value and absolute expiry to the API boundary without referencing HTTP, cookies, or ASP.NET Core types.
+- [X] T019 [US1] Add browser-cookie creation with `auth_refresh`, `Path=/api/auth`, no Domain, `HttpOnly`, `SameSite=Strict`, absolute family expiry, and Production-only Secure behavior in `src/Authentication.Api/Features/Sessions/RefreshCookieWriter.cs`.
+- [X] T020 [US1] Extend the login HTTP boundary to emit the refresh cookie while retaining the established `{ accessToken, expiresAtUtc }` body and generic credential failures in `src/Authentication.Api/Features/Login/LoginEndpoint.cs`.
 
 **Checkpoint**: US1 is independently demonstrable without refresh, logout, or administrative
 revocation endpoints.
