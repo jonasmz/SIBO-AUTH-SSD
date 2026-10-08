@@ -112,4 +112,4 @@ Focused tests live in `tests/Authentication.IntegrationTests/Scenarios/`: `Secur
 `AccountLockoutTests`, `RateLimitingTests`, `ForwardedHeadersTests`, `BrowserBoundaryTests`,
 `AntiEnumerationTests`, and `SecretExposureTests`.
 
-Gate G7 approval by the project owner is **pending** (task T034).
+Gate G7 was explicitly approved by the project owner on 2026-10-08 (task T034); closing commit `[Phase 7] Close Gate G7`.
