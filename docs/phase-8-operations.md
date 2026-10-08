@@ -4,7 +4,7 @@ Phase 8 integrates the system into one production topology: `frontend` (Nginx, t
 point), `auth-api`, `api-a` and `api-b`. This guide covers persistence and recovery first. The deployment
 procedure, public URLs, logging, OpenAPI exposure, acceptance instructions and the Gate G8 evidence follow.
 The Angular source and its build belong to the frontend project; this repository only serves its compiled
-files. Gate G8 approval and the closing commit or tag are controlled by the project owner.
+files. Gate G8 was explicitly approved by the project owner on 2026-10-08 (task T036); closing commit `[Phase 8] Close Gate G8`, tag `gate-g8`.
 
 ## Persistent paths
 
