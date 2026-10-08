@@ -80,9 +80,20 @@ Neither endpoint needs an access token, session, or `Origin`.
   rejected like an invalid token. Lockout state is not read or changed by recovery.
 - **Throttling.** Rate limiting of these anonymous endpoints (SRS NFR-SEC-BF-006..009) is delivered
   in Phase 7; until then they are not throttled.
-- **Logging.** `PasswordResetRequested` and `PasswordReset` events carry the user id, UTC time, and
-  trace/span ids (and the revoked count for a reset). Tokens, passwords, hashes, security stamps,
-  and SMTP values never reach the logs.
+- **Logging.** Four events, all with the UTC time and trace/span ids:
+  - `PasswordResetRequested` (`Information`): a token was issued; carries the user id.
+  - `PasswordReset` (`Information`): a password was reset; carries the user id and the number of
+    renewable session families revoked.
+  - `EmailDeliveryFailed` (`Warning`): the recovery email was not delivered; carries the exception
+    type, the SMTP status code when the server rejected a command, and the configured host and port.
+    The caller still received the generic `204`.
+  - `PasswordResetTokenFailed` (`Warning`): Identity could not issue a token for an existing,
+    enabled account (for example a missing security stamp or an unusable key ring); carries the
+    exception type only. The caller still received the generic `204`, and no email was sent.
+
+  Tokens, passwords, hashes, security stamps, recipient addresses, message bodies, exception
+  messages, and SMTP credentials never reach the logs. A warning's trace id links it to the request
+  and, for a delivery failure, to the `PasswordResetRequested` event that names the user.
 
 ## Verification commands
 
@@ -99,14 +110,14 @@ script prepares the key-ring directory as the container user with mode `0700` th
 root container, because that directory is private to the container user. The reusable validation
 guide is `specs/006-phase-6-password-recovery-email/quickstart.md`.
 
-## Gate G6 evidence (recorded 2026-10-08)
+## Gate G6 evidence (recorded 2026-10-08, refreshed after the convergence tasks T043–T050)
 
 | State | Evidence | Result |
 |---|---|---|
 | Build | `dotnet build --no-incremental` | PASS, 0 warnings, 0 errors |
-| Tests | `dotnet test` | PASS, 154 of 154 (unit and integration), 0 skipped |
+| Tests | `dotnet test` | PASS, 157 of 157 (unit and integration), 0 skipped |
 | Startup | `phase-6.sh`: stack ready on disposable storage and an SMTP sink; ready again after `restart`, `up --force-recreate`, and `down -v` + `up` | PASS |
-| Feature | `phase-6.sh`: identical `204` for existing and unknown addresses, one SMTP delivery to the existing account only, token valid after the lifecycle operations, reset replaces the password, every session revoked, token single-use, secret-free logs with the recovery events | PASS |
+| Feature | `phase-6.sh`: identical `204` for existing and unknown addresses, one SMTP delivery to the existing account only, token valid after the lifecycle operations, reset replaces the password, every session revoked, token single-use, key ring owned by the container UID with mode `0700`, secret-free logs with the recovery events | PASS |
 | Regression | `phase-6.sh` finishing with `phase-5.sh` → `phase-4.sh` → `phase-3.sh` → `phase-2.sh` → `phase-1.sh` | PASS (all report ALL PASS) |
 
 Decoupled SMTP and scope boundaries:

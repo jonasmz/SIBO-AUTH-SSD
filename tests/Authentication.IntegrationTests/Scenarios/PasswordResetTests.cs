@@ -184,6 +184,66 @@ public sealed class PasswordResetTests
         }
     }
 
+    [Fact]
+    public async Task TheEmailIsMatchedRegardlessOfLetterCase()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var factory = new AuthenticationApiFactory();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+        using var admin = AdminTestSupport.WithBearer(factory, await AdminTestSupport.AdministratorTokenAsync(client, cancellationToken));
+        _ = await AdminTestSupport.CreateUserAsync(admin, Email, OldPassword, cancellationToken: cancellationToken);
+        var token = await RequestTokenAsync(factory, client, Email, cancellationToken);
+
+        // The same normalization as sign-in and user administration.
+        using var response = await ResetAsync(client, "MEMBER@Example.TEST", token, NewPassword, cancellationToken);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        await PasswordChangeTests.AssertLoginAsync(client, Email, NewPassword, HttpStatusCode.OK, cancellationToken);
+    }
+
+    [Fact]
+    public async Task AResetTokenIsNeitherAnAccessTokenNorARefreshCredential()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var factory = new AuthenticationApiFactory();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+        var adminToken = await AdminTestSupport.AdministratorTokenAsync(client, cancellationToken);
+        using (var admin = AdminTestSupport.WithBearer(factory, adminToken))
+        {
+            _ = await AdminTestSupport.CreateUserAsync(admin, Email, OldPassword, cancellationToken: cancellationToken);
+        }
+
+        var token = await RequestTokenAsync(factory, client, Email, cancellationToken);
+
+        // As a bearer token: neither Authentication API nor a consumer accepts it.
+        using (var request = new HttpRequestMessage(HttpMethod.Get, "/api/admin/users"))
+        {
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            using var response = await client.SendAsync(request, cancellationToken);
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
+
+        using var apiA = new ReferenceConsumerFactory("api-a", factory.Resources.PublicKeyPem);
+        using var clientA = apiA.CreateClient();
+        using (var request = new HttpRequestMessage(HttpMethod.Get, "/api/caller"))
+        {
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            using var response = await clientA.SendAsync(request, cancellationToken);
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
+
+        // As a refresh credential: no access token and no renewable session come out of it.
+        using (var refresh = await AdministrativeSessionRevocationTests.RefreshAsync(client, token, cancellationToken))
+        {
+            Assert.Equal(HttpStatusCode.Unauthorized, refresh.StatusCode);
+            Assert.False(refresh.Headers.TryGetValues("Set-Cookie", out _));
+        }
+
+        // Misuse spent nothing: the token still resets the password once.
+        using var reset = await ResetAsync(client, Email, token, NewPassword, cancellationToken);
+        Assert.Equal(HttpStatusCode.NoContent, reset.StatusCode);
+    }
+
     /// <summary>Requests recovery and returns the token carried by the message the host asked to send.</summary>
     internal static async Task<string> RequestTokenAsync(AuthenticationApiFactory factory, HttpClient client, string email, CancellationToken cancellationToken)
     {

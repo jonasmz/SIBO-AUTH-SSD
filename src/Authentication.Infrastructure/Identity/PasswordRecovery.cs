@@ -1,4 +1,5 @@
 using System.Data;
+using System.Data.Common;
 using System.Diagnostics;
 using System.Text;
 using Authentication.Application.Features.PasswordRecovery;
@@ -29,7 +30,19 @@ public sealed partial class PasswordRecovery(
             return null;
         }
 
-        var token = await userManager.GeneratePasswordResetTokenAsync(user);
+        string token;
+        try
+        {
+            token = await userManager.GeneratePasswordResetTokenAsync(user);
+        }
+        catch (Exception exception) when (exception is not (DbException or DbUpdateException or OperationCanceledException))
+        {
+            // Only an existing, enabled account reaches this point (for example with an unwritable key
+            // ring), so the failure must look like every other well-formed request: no ticket, same 204.
+            LogResetTokenFailed(logger, exception.GetType().Name, timeProvider.GetUtcNow(), Activity.Current?.TraceId.ToString(), Activity.Current?.SpanId.ToString());
+            return null;
+        }
+
         LogResetRequested(logger, user.Id, timeProvider.GetUtcNow(), Activity.Current?.TraceId.ToString(), Activity.Current?.SpanId.ToString());
 
         // Base64url keeps the token a single copy-safe word; mail clients may wrap or alter '+', '/' and '='.
@@ -105,6 +118,9 @@ public sealed partial class PasswordRecovery(
 
     [LoggerMessage(LogLevel.Information, "PasswordResetRequested: reset token issued for user {UserId} at {OccurredAtUtc:O}; trace {TraceId}, span {SpanId}.")]
     private static partial void LogResetRequested(ILogger logger, string userId, DateTimeOffset occurredAtUtc, string? traceId, string? spanId);
+
+    [LoggerMessage(LogLevel.Warning, "PasswordResetTokenFailed: a password reset token could not be issued ({ExceptionType}) at {OccurredAtUtc:O}; trace {TraceId}, span {SpanId}.")]
+    private static partial void LogResetTokenFailed(ILogger logger, string exceptionType, DateTimeOffset occurredAtUtc, string? traceId, string? spanId);
 
     [LoggerMessage(LogLevel.Information, "PasswordReset: password reset for user {UserId}; {RevokedCount} renewable session families revoked at {OccurredAtUtc:O}; trace {TraceId}, span {SpanId}.")]
     private static partial void LogPasswordReset(ILogger logger, string userId, int revokedCount, DateTimeOffset occurredAtUtc, string? traceId, string? spanId);

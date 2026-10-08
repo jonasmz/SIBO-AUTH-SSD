@@ -39,7 +39,7 @@ Expected: zero warnings, all tests pass, no pending model changes. Consolidated 
 | 2 | Forgot: same address in different letter case | treated as the enabled account (one message) |
 | 3 | Forgot: non-JSON, malformed, missing/blank/invalid email | `400 The request is invalid.`; no sender call |
 | 4 | Forgot: real `SmtpEmailSender` against a refused local port | `204`; one `EmailDeliveryFailed` warning with exception type, host, port, UTC, trace id; no token, recipient or SMTP password in logs |
-| 4b | Forgot: token generation fails for an enabled account (key directory replaced by a file after startup) | `204`; one `PasswordResetTokenFailed` warning; nothing secret logged |
+| 4b | Forgot: token generation fails for an enabled account (its `SecurityStamp` set to `NULL` in SQLite; Data Protection creates and caches its key at startup, so the key directory cannot be broken afterwards) | `204`; one `PasswordResetTokenFailed` warning; nothing secret logged |
 | 5 | Forgot: no session is revoked; two consecutive requests send two messages | all families still refresh; no throttling |
 | 6 | Reset: valid token (taken from the fake sender's message) + valid password | `204`; old password `401` at login; new password `200`; email, roles, enabled, lockout fields unchanged |
 | 7 | Reset: garbage, one character altered, other account's token, same token reused after success, token issued before a Phase 5 password change | `401 Invalid or expired reset token.`; nothing changed |

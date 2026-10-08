@@ -186,16 +186,17 @@ docker compose down -v >/dev/null
 up_and_wait
 pass "down -v + up on the same host directories: stack back"
 
-# The key ring is a host bind mount, not a Compose volume, with mode 0700.
+# The key ring is a host bind mount, not a Compose volume, owned by the container user with mode 0700.
 MOUNTS="$(docker inspect "$(docker compose ps -q auth-api)" --format '{{json .Mounts}}')"
 [ "$(jq -r --arg src "$AUTH_DATAPROTECTION_HOST_PATH" '[.[] | select(.Destination == "/var/lib/auth-api/dataprotection" and .Type == "bind" and .Source == $src)] | length' <<<"$MOUNTS")" = 1 ] \
   || fail "the key ring is not the expected host bind mount"
 [ -z "$(docker volume ls -q --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME")" ] || fail "a Compose-managed volume exists"
 [ "$(stat -c %a "$AUTH_DATAPROTECTION_HOST_PATH")" = 700 ] || fail "the key ring directory is not mode 0700"
+[ "$(stat -c %u "$AUTH_DATAPROTECTION_HOST_PATH")" = "$APP_UID_VALUE" ] || fail "the key ring directory is not owned by the container user"
 # The directory is private to the container user, so list it as root through a throwaway container.
 docker run --rm --user root --entrypoint sh -v "$AUTH_DATAPROTECTION_HOST_PATH:/keys:ro" "$RUNTIME_IMAGE" -c 'ls /keys/*.xml >/dev/null 2>&1' \
   || fail "no key file was persisted in the key ring"
-pass "the key ring is a host bind mount (no Compose volume), mode 0700, holding persisted keys"
+pass "the key ring is a host bind mount (no Compose volume), owned by the container user, mode 0700, holding persisted keys"
 
 # --- US2 + US3: reset, revocation of every session, single use -------------------------------------------------
 [ "$(reset_password "$USER_EMAIL" "$TOKEN" "$USER_NEW_PASSWORD")" = 204 ] || fail "the token did not reset the password after the lifecycle operations"

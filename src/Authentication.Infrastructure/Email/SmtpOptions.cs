@@ -3,13 +3,6 @@ using Microsoft.Extensions.Configuration;
 
 namespace Authentication.Infrastructure.Email;
 
-public enum SmtpSecurity
-{
-    None,
-    StartTls,
-    SslOnConnect
-}
-
 public sealed class SmtpOptions
 {
     public const string SectionName = "Smtp";
