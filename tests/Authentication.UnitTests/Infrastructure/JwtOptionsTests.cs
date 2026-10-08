@@ -57,7 +57,9 @@ public sealed class JwtOptionsTests
             ["Jwt:Audience"] = "authentication-api-tests",
             ["Jwt:AccessTokenLifetimeMinutes"] = "15",
             ["Jwt:PrivateKeyPath"] = privateKeyPath,
-            ["Jwt:ClockSkewSeconds"] = clockSkewSeconds
+            ["Jwt:ClockSkewSeconds"] = clockSkewSeconds,
+            ["RefreshSession:LifetimeDays"] = "7",
+            ["Security:FrontendOrigin"] = "https://frontend.test"
         };
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
 

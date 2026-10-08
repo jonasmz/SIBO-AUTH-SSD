@@ -2,11 +2,13 @@ using Authentication.Api.Features.Administration;
 using Authentication.Api.Features.Health;
 using Authentication.Api.Features.Login;
 using Authentication.Infrastructure;
+using Authentication.Api.Features.Sessions;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProblemDetails();
 builder.Services.AddAuthenticationInfrastructure(builder.Configuration);
+builder.Services.AddSingleton<RefreshCookieWriter>();
 
 var app = builder.Build();
 

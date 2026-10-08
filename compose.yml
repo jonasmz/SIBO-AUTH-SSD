@@ -12,6 +12,8 @@ services:
       Jwt__AccessTokenLifetimeMinutes: "${AUTH_JWT_LIFETIME_MINUTES:-15}"
       Jwt__PrivateKeyPath: "/var/lib/auth-api/keys/jwt-private.pem"
       Jwt__ClockSkewSeconds: "${AUTH_JWT_CLOCK_SKEW_SECONDS:-30}"
+      RefreshSession__LifetimeDays: "${AUTH_REFRESH_SESSION_LIFETIME_DAYS:-7}"
+      Security__FrontendOrigin: "${AUTH_FRONTEND_ORIGIN:?set AUTH_FRONTEND_ORIGIN}"
     volumes:
       - type: bind
         source: ${AUTH_SQLITE_HOST_PATH:?set AUTH_SQLITE_HOST_PATH}

@@ -1,10 +1,12 @@
 using Authentication.Application.Features.Login;
 using Authentication.Application.Features.Roles;
+using Authentication.Application.Features.Sessions;
 using Authentication.Application.Features.Users;
 using Authentication.Infrastructure.Health;
 using Authentication.Infrastructure.Identity;
 using Authentication.Infrastructure.Persistence;
 using Authentication.Infrastructure.Security;
+using Authentication.Infrastructure.Sessions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -35,11 +37,19 @@ public static class DependencyInjection
         {
             ConnectionString = configuration[$"{SqliteOptions.SectionName}:ConnectionString"] ?? string.Empty
         };
+        var refreshOptions = new RefreshSessionOptions
+        {
+            LifetimeDays = ParseLifetime(configuration[$"{RefreshSessionOptions.SectionName}:LifetimeDays"] ?? "7"),
+            FrontendOrigin = configuration["Security:FrontendOrigin"] ?? string.Empty
+        };
 
-        Validate(jwtOptions, sqliteOptions);
+        Validate(jwtOptions, sqliteOptions, refreshOptions);
 
         services.AddSingleton(Options.Create(jwtOptions));
         services.AddSingleton(Options.Create(sqliteOptions));
+        services.AddSingleton(Options.Create(refreshOptions));
+        services.AddSingleton<RefreshCredentialProtector>();
+        services.AddScoped<IRenewableSessionStore, RenewableSessionStore>();
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<InitializationState>();
         services.AddSingleton<DatabaseInitializer>();
@@ -97,13 +107,15 @@ public static class DependencyInjection
         return int.TryParse(value, out var seconds) ? seconds : -1;
     }
 
-    private static void Validate(JwtOptions jwtOptions, SqliteOptions sqliteOptions)
+    private static void Validate(JwtOptions jwtOptions, SqliteOptions sqliteOptions, RefreshSessionOptions refreshOptions)
     {
         Require(!string.IsNullOrWhiteSpace(sqliteOptions.ConnectionString), $"{SqliteOptions.SectionName}:ConnectionString");
         Require(!string.IsNullOrWhiteSpace(jwtOptions.Issuer), $"{JwtOptions.SectionName}:Issuer");
         Require(!string.IsNullOrWhiteSpace(jwtOptions.Audience), $"{JwtOptions.SectionName}:Audience");
         Require(jwtOptions.AccessTokenLifetimeMinutes > 0, $"{JwtOptions.SectionName}:AccessTokenLifetimeMinutes");
         Require(jwtOptions.ClockSkewSeconds is >= 0 and <= 60, $"{JwtOptions.SectionName}:ClockSkewSeconds");
+        Require(refreshOptions.LifetimeDays > 0 && refreshOptions.LifetimeDays <= int.MaxValue / 2, $"{RefreshSessionOptions.SectionName}:LifetimeDays");
+        Require(Uri.TryCreate(refreshOptions.FrontendOrigin, UriKind.Absolute, out var origin) && !string.IsNullOrEmpty(origin.Host), "Security:FrontendOrigin");
 
         var keySetting = $"{JwtOptions.SectionName}:PrivateKeyPath";
         Require(!string.IsNullOrWhiteSpace(jwtOptions.PrivateKeyPath), keySetting);

@@ -29,6 +29,8 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
         SetEnvironmentVariable("Jwt__AccessTokenLifetimeMinutes", accessTokenLifetimeMinutes.ToString(System.Globalization.CultureInfo.InvariantCulture));
         SetEnvironmentVariable("Jwt__PrivateKeyPath", _resources.PrivateKeyPath);
         SetEnvironmentVariable("Jwt__ClockSkewSeconds", "30");
+        SetEnvironmentVariable("RefreshSession__LifetimeDays", "7");
+        SetEnvironmentVariable("Security__FrontendOrigin", "https://frontend.test");
     }
 
     public Phase1TestResources Resources => _resources;
