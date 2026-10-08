@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Authentication.Application.Features.Passwords;
 using Authentication.Domain.Sessions;
 using Authentication.Infrastructure.Persistence;
+using Authentication.Infrastructure.Sessions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -48,22 +49,15 @@ public sealed partial class PasswordChange(
             return outcome;
         }
 
-        var families = await context.RenewableSessionFamilies
-            .Where(family => family.UserId == user.Id && family.RevokedAtUtc == null)
-            .ToListAsync(cancellationToken);
-        var toRevoke = families.Where(family => family.IsActive(now) && family.Id != keptFamilyId).ToList();
-        foreach (var family in toRevoke)
-        {
-            family.Revoke(now, SessionRevocationReason.PasswordChanged);
-        }
+        var revoked = await SessionFamilyRevocation.RevokeActiveAsync(
+            context, user.Id, now, SessionRevocationReason.PasswordChanged, keptFamilyId, cancellationToken);
 
-        await context.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
         LogPasswordChanged(
             logger,
             user.Id,
-            toRevoke.Count,
+            revoked,
             keptFamilyId is not null,
             now,
             Activity.Current?.TraceId.ToString(),

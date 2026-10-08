@@ -1,0 +1,15 @@
+# Acceptance-only override: a disposable SMTP sink that captures the password-recovery email.
+# It is never referenced by compose.yml and is not part of the production topology.
+# Used through COMPOSE_FILE by tests/acceptance/phase-6.sh.
+services:
+  mail-sink:
+    image: axllent/mailpit:v1.31.1@sha256:98b916bd3c8d61f7633a52d3ea2f58d00620cb01ca57ab59edde68c347a95365
+    environment:
+      # Accept any SMTP credentials over the plain test connection so the adapter's authentication path runs.
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    ports:
+      - "${MAIL_SINK_HTTP_PORT:-18025}:8025"
+  auth-api:
+    depends_on:
+      - mail-sink

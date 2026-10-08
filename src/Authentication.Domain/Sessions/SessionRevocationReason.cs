@@ -6,5 +6,6 @@ public enum SessionRevocationReason
     Logout,
     UserDisabled,
     Administrator,
-    PasswordChanged
+    PasswordChanged,
+    PasswordReset
 }

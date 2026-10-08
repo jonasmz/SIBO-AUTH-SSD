@@ -14,6 +14,14 @@ services:
       Jwt__ClockSkewSeconds: "${AUTH_JWT_CLOCK_SKEW_SECONDS:-30}"
       RefreshSession__LifetimeDays: "${AUTH_REFRESH_SESSION_LIFETIME_DAYS:-7}"
       Security__FrontendOrigin: "${AUTH_FRONTEND_ORIGIN:?set AUTH_FRONTEND_ORIGIN}"
+      DataProtection__KeysPath: "/var/lib/auth-api/dataprotection"
+      Smtp__Host: "${AUTH_SMTP_HOST:?set AUTH_SMTP_HOST}"
+      Smtp__Port: "${AUTH_SMTP_PORT:?set AUTH_SMTP_PORT}"
+      Smtp__Security: "${AUTH_SMTP_SECURITY:?set AUTH_SMTP_SECURITY}"
+      Smtp__Username: "${AUTH_SMTP_USERNAME:-}"
+      Smtp__Password: "${AUTH_SMTP_PASSWORD:-}"
+      Smtp__SenderAddress: "${AUTH_SMTP_SENDER_ADDRESS:?set AUTH_SMTP_SENDER_ADDRESS}"
+      Smtp__SenderName: "${AUTH_SMTP_SENDER_NAME:?set AUTH_SMTP_SENDER_NAME}"
     volumes:
       - type: bind
         source: ${AUTH_SQLITE_HOST_PATH:?set AUTH_SQLITE_HOST_PATH}
@@ -22,6 +30,11 @@ services:
         source: ${AUTH_RSA_HOST_PATH:?set AUTH_RSA_HOST_PATH}
         target: /var/lib/auth-api/keys
         read_only: true
+      # Data Protection key ring: a host bind mount (never a Compose-managed volume), so
+      # restart, recreation and `docker compose down -v` keep outstanding reset tokens valid.
+      - type: bind
+        source: ${AUTH_DATAPROTECTION_HOST_PATH:?set AUTH_DATAPROTECTION_HOST_PATH}
+        target: /var/lib/auth-api/dataprotection
 
   api-a:
     image: reference-consumer-api:dev

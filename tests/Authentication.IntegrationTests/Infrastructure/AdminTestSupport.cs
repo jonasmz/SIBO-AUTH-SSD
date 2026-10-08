@@ -5,18 +5,6 @@ using Xunit;
 
 namespace Authentication.IntegrationTests.Infrastructure;
 
-public sealed record LoginTokenBody(string AccessToken, DateTime ExpiresAtUtc);
-
-public sealed record AdminUserBody(
-    string Id,
-    string Email,
-    bool Enabled,
-    bool IsLockedOut,
-    DateTime? LockoutEndUtc,
-    string[] Roles);
-
-public sealed record AdminRoleBody(string Id, string Name);
-
 /// <summary>Shared helpers for the Phase 3 scenario classes; they only call the public HTTP surface.</summary>
 public static class AdminTestSupport
 {

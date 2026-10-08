@@ -18,6 +18,14 @@ export AUTH_SQLITE_HOST_PATH="$STATE/data"
 export AUTH_RSA_HOST_PATH="$STATE/keys"
 export AUTH_JWT_ISSUER="https://auth-api.acceptance"
 export AUTH_FRONTEND_ORIGIN="${AUTH_FRONTEND_ORIGIN:-https://frontend.acceptance}"
+# Phase 6 settings (required by compose.yml): a disposable key-ring directory and a dummy SMTP sender
+# that these scripts never use.
+export AUTH_DATAPROTECTION_HOST_PATH="$STATE/dataprotection"
+export AUTH_SMTP_HOST="${AUTH_SMTP_HOST:-smtp.acceptance.invalid}"
+export AUTH_SMTP_PORT="${AUTH_SMTP_PORT:-2525}"
+export AUTH_SMTP_SECURITY="${AUTH_SMTP_SECURITY:-None}"
+export AUTH_SMTP_SENDER_ADDRESS="${AUTH_SMTP_SENDER_ADDRESS:-no-reply@acceptance.invalid}"
+export AUTH_SMTP_SENDER_NAME="${AUTH_SMTP_SENDER_NAME:-Authentication API Acceptance}"
 export AUTH_JWT_AUDIENCE="authentication-clients"
 export AUTH_HTTP_PORT="$PORT"
 export COMPOSE_PROJECT_NAME="auth-api-phase1-acceptance"
@@ -63,6 +71,7 @@ fingerprint() {
 # accessible. Production hosts should instead chown them to the container UID (see docs).
 install -d -m 0755 "$STATE/keys"
 install -d -m 0777 "$STATE/data"
+install -d -m 0777 "$STATE/dataprotection"
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out "$STATE/keys/jwt-private.pem" 2>/dev/null
 openssl pkey -in "$STATE/keys/jwt-private.pem" -pubout -out "$STATE/keys/jwt-public.pem"
 chmod 0644 "$STATE/keys/jwt-private.pem" "$STATE/keys/jwt-public.pem"

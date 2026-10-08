@@ -4,6 +4,7 @@ using Authentication.Application.Features.Users;
 using Authentication.Domain.Administration;
 using Authentication.Domain.Sessions;
 using Authentication.Infrastructure.Persistence;
+using Authentication.Infrastructure.Sessions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -184,22 +185,8 @@ public sealed partial class UserAdministration(
     }
 
     /// <summary>Revokes the user's active families inside the caller's transaction; returns how many changed.</summary>
-    private async Task<int> RevokeActiveFamiliesAsync(string userId, SessionRevocationReason reason, CancellationToken cancellationToken)
-    {
-        var now = timeProvider.GetUtcNow();
-        var families = await context.RenewableSessionFamilies
-            .Where(family => family.UserId == userId && family.RevokedAtUtc == null)
-            .ToListAsync(cancellationToken);
-        var active = families.Where(family => family.IsActive(now)).ToList();
-        foreach (var family in active)
-        {
-            family.Revoke(now, reason);
-        }
-
-        await context.SaveChangesAsync(cancellationToken);
-
-        return active.Count;
-    }
+    private Task<int> RevokeActiveFamiliesAsync(string userId, SessionRevocationReason reason, CancellationToken cancellationToken) =>
+        SessionFamilyRevocation.RevokeActiveAsync(context, userId, timeProvider.GetUtcNow(), reason, keepFamilyId: null, cancellationToken);
 
     [LoggerMessage(LogLevel.Information, "Renewable sessions of user {UserId} revoked ({Count} families, reason {Reason}) at {OccurredAtUtc:O}; trace {TraceId}, span {SpanId}.")]
     private static partial void LogSessionsRevoked(ILogger logger, string userId, int count, string reason, DateTimeOffset occurredAtUtc, string? traceId, string? spanId);
