@@ -5,6 +5,7 @@ using Authentication.Api.Features.PasswordRecovery;
 using Authentication.Api.Features.Passwords;
 using Authentication.Infrastructure;
 using Authentication.Api.Features.Sessions;
+using Authentication.Api.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,10 +13,12 @@ builder.Services.AddProblemDetails();
 builder.Services.AddAuthenticationInfrastructure(builder.Configuration);
 builder.Services.AddSingleton<RefreshCookieWriter>();
 builder.Services.AddSingleton<BrowserOriginValidator>();
+builder.Services.AddAuthenticationRateLimiting(builder.Configuration);
 
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

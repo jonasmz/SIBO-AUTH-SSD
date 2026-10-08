@@ -31,7 +31,8 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
         IReadOnlyDictionary<string, string>? additionalSettings = null,
         string? dataProtectionKeysPath = null,
         TimeSpan? resetTokenLifespan = null,
-        bool useRealEmailSender = false)
+        bool useRealEmailSender = false,
+        bool liftRateLimits = true)
     {
         _resetTokenLifespan = resetTokenLifespan;
         _useRealEmailSender = useRealEmailSender;
@@ -54,6 +55,20 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
         SetEnvironmentVariable("Smtp__Security", "None");
         SetEnvironmentVariable("Smtp__SenderAddress", "no-reply@auth.test");
         SetEnvironmentVariable("Smtp__SenderName", "Authentication API Tests");
+
+        // Request limits are lifted so unrelated scenarios never meet them; a test that supplies a policy's own
+        // PermitLimit gets exactly that value, and the remaining policies stay lifted.
+        if (liftRateLimits)
+        {
+            foreach (var policy in new[] { "Login", "Refresh", "ForgotPassword", "ResetPassword", "ForgotPasswordAddress" })
+            {
+                var key = $"RateLimiting__{policy}__PermitLimit";
+                if (additionalSettings?.ContainsKey(key) != true)
+                {
+                    SetEnvironmentVariable(key, "10000");
+                }
+            }
+        }
 
         // Extra external settings such as a stricter Identity password policy
         // (for example "Identity__Password__RequiredLength").
@@ -95,6 +110,8 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
                 services.RemoveAll<TimeProvider>();
                 services.AddSingleton(_timeProvider);
             }
+
+            services.AddSingleton<IStartupFilter, TestConnectionAddressStartupFilter>();
 
             if (!_useRealEmailSender)
             {
