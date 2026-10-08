@@ -1,3 +1,4 @@
+using Authentication.Api.Security;
 using System.Data.Common;
 using System.Text.Json;
 using Authentication.Application.Features.Login;
@@ -10,7 +11,7 @@ public static class LoginEndpoint
 {
     public static IEndpointRouteBuilder MapLoginEndpoint(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/auth/login", HandleAsync).AllowAnonymous();
+        endpoints.MapPost("/api/auth/login", HandleAsync).AllowAnonymous().RequireRateLimiting(RateLimitingRegistration.Login);
 
         return endpoints;
     }

@@ -20,6 +20,7 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
     private readonly CapturingLoggerProvider _logs = new();
     private readonly TimeSpan? _resetTokenLifespan;
     private readonly bool _useRealEmailSender;
+    private readonly string _environment;
 
     public AuthenticationApiFactory(
         string? connectionStringOverride = null,
@@ -32,8 +33,10 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
         string? dataProtectionKeysPath = null,
         TimeSpan? resetTokenLifespan = null,
         bool useRealEmailSender = false,
-        bool liftRateLimits = true)
+        bool liftRateLimits = true,
+        string environment = "Testing")
     {
+        _environment = environment;
         _resetTokenLifespan = resetTokenLifespan;
         _useRealEmailSender = useRealEmailSender;
         _ownsResources = sharedResources is null;
@@ -100,7 +103,7 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Testing");
+        builder.UseEnvironment(_environment);
         builder.ConfigureLogging(logging => logging.AddProvider(_logs));
 
         builder.ConfigureTestServices(services =>

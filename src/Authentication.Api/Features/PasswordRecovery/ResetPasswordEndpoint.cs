@@ -1,3 +1,4 @@
+using Authentication.Api.Security;
 using System.Data.Common;
 using System.Text.Json;
 using Authentication.Application.Features.PasswordRecovery;
@@ -10,7 +11,7 @@ public static class ResetPasswordEndpoint
 {
     public static IEndpointRouteBuilder MapResetPasswordEndpoint(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/auth/reset-password", HandleAsync).AllowAnonymous();
+        endpoints.MapPost("/api/auth/reset-password", HandleAsync).AllowAnonymous().RequireRateLimiting(RateLimitingRegistration.ResetPassword);
 
         return endpoints;
     }

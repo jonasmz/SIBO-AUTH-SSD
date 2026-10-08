@@ -44,6 +44,11 @@ public sealed partial class PasswordChange(
                 // that counter is committed; the credential and every session stay unchanged.
                 await userManager.AccessFailedAsync(user);
                 await transaction.CommitAsync(cancellationToken);
+                if (user.LockoutEnd is { } lockoutEnd && await userManager.IsLockedOutAsync(user))
+                {
+                    SecurityEvents.AccountLockedOut(
+                        logger, user.Id, lockoutEnd, "ChangePassword", now, Activity.Current?.TraceId.ToString(), Activity.Current?.SpanId.ToString());
+                }
             }
 
             return outcome;

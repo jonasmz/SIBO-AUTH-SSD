@@ -1,3 +1,4 @@
+using Authentication.Api.Security;
 using System.Data.Common;
 using System.Text.Json;
 using Authentication.Application.Features.PasswordRecovery;
@@ -10,7 +11,7 @@ public static class ForgotPasswordEndpoint
 {
     public static IEndpointRouteBuilder MapForgotPasswordEndpoint(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/auth/forgot-password", HandleAsync).AllowAnonymous();
+        endpoints.MapPost("/api/auth/forgot-password", HandleAsync).AllowAnonymous().RequireRateLimiting(RateLimitingRegistration.ForgotPassword);
 
         return endpoints;
     }
@@ -18,6 +19,7 @@ public static class ForgotPasswordEndpoint
     private static async Task<IResult> HandleAsync(
         HttpRequest httpRequest,
         ForgotPasswordHandler handler,
+        RecoveryAddressLimiter addressLimiter,
         InitializationState state,
         CancellationToken cancellationToken)
     {
@@ -29,6 +31,15 @@ public static class ForgotPasswordEndpoint
                 statusCode: StatusCodes.Status400BadRequest,
                 title: "Bad Request",
                 detail: "The request is invalid.");
+        }
+
+        // Counted for every submitted address, existing or not, so a 429 never reveals an account; it runs
+        // after validation (a 400 consumes nothing) and before any lookup.
+        var attempt = addressLimiter.TryAcquire(request.Email!);
+        if (!attempt.Acquired)
+        {
+            await TooManyRequests.WriteAsync(httpRequest.HttpContext, RateLimitingRegistration.ForgotPasswordAddress, attempt.RetryAfter, logClientAddress: false);
+            return Results.Empty;
         }
 
         if (!state.IsReady)
