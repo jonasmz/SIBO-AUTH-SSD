@@ -137,4 +137,4 @@ Focused tests live in `tests/Authentication.IntegrationTests/Scenarios/`:
 `PasswordResetSessionRevocationTests`, `PasswordRecoveryRestartTests`, and
 `ConsumerValidationTests`; unit tests are `SmtpOptionsTests` and `SmtpEmailSenderMessageTests`.
 
-Gate G6 approval by the project owner is **pending** (task T042).
+Gate G6 was approved by the project owner on 2026-10-08.
