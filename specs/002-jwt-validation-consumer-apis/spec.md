@@ -8,6 +8,13 @@
 
 **Input**: Phase 2 — JWT validation in consumer APIs
 
+## Clarifications
+
+### Session 2026-10-07
+
+- Q: Do tokens carry one shared audience validated by both business APIs, or does each API have its own? → A: One shared audience, configured identically in Authentication API, Business API A, and Business API B; the same token is valid on both.
+- Q: Are Business API A and B runnable Compose services in this phase, or only hosted inside automated tests? → A: Runnable Compose services (no reverse proxy or frontend); the acceptance demonstration stops Authentication API and shows a still-valid token is accepted.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Business APIs Accept Valid Tokens Locally (Priority: P1)
@@ -60,7 +67,7 @@ a different audience, and confirm each is answered with `401 Unauthorized`.
    **When** it is presented, **Then** the API responds `401 Unauthorized`.
 3. **Given** a token whose expiry has passed beyond the configured clock tolerance, **When** it
    is presented, **Then** the API responds `401 Unauthorized`.
-4. **Given** a token with an unexpected issuer, or one not intended for the receiving API's
+4. **Given** a token with an unexpected issuer, or one whose audience differs from the shared
    audience, **When** it is presented, **Then** the API responds `401 Unauthorized`.
 5. **Given** a token using a signing algorithm other than the expected one, or an unsigned
    token, **When** it is presented, **Then** the API responds `401 Unauthorized`.
@@ -119,8 +126,8 @@ and confirm the first succeeds and the second is answered with `403 Forbidden`.
   MUST result in `401 Unauthorized`.
 - **FR-003**: Each business API MUST be supplied only the public verification material; the
   private signing key MUST NOT be present in, mounted into, or configured for either business API.
-- **FR-004**: The expected issuer, the expected audience, and the public verification material
-  MUST be supplied to each business API through external configuration, not embedded in source or
+- **FR-004**: The expected issuer, the expected audience (one value shared by Authentication API
+  and both business APIs), and the public verification material MUST be supplied to each business API through external configuration, not embedded in source or
   in a container image.
 - **FR-005**: The clock tolerance applied when evaluating token expiry MUST be explicit,
   externally configurable, identical in both business APIs, and short enough not to materially
@@ -142,7 +149,11 @@ and confirm the first succeeds and the second is answered with `403 Forbidden`.
 - **FR-012**: Each business API MUST fail to start, without exposing secrets, when its required
   verification configuration (public key, issuer, audience, clock tolerance) is missing or
   invalid.
-- **FR-013**: Phase 1 behavior — startup, login, token issuance, health, and persistence — MUST
+- **FR-013**: Business API A and Business API B MUST each run as a service of the Docker Compose
+  reference deployment, configured only through external configuration and public verification
+  material, and the reference deployment MUST still contain no migration or bootstrap service
+  and no reverse proxy or frontend.
+- **FR-014**: Phase 1 behavior — startup, login, token issuance, health, and persistence — MUST
   remain unchanged and verified.
 
 ### Applicable Non-Functional Requirements
@@ -175,7 +186,8 @@ This feature MUST NOT introduce:
 - JWKS publication or automatic signing-key rotation.
 - Business capabilities beyond the minimal protected endpoints needed to demonstrate validation.
 - Reverse-proxy routing, frontend integration, final four-service deployment acceptance,
-  backup/restore, or hardening assigned to later phases.
+  backup/restore, or hardening assigned to later phases (the two business API services are added
+  to Compose, but no proxy, frontend, or later-phase service).
 - Any change to Authentication API behavior, contracts, or persistence established in Phase 1.
 - Speculative abstractions, shared libraries, or persistence intended solely for later phases.
 
@@ -197,8 +209,8 @@ This feature MUST NOT introduce:
 - **SC-001**: A token issued by Authentication API is accepted by a protected endpoint of each
   of the two business APIs, and each reports the same stable user identifier and roles as the
   token.
-- **SC-002**: With Authentication API stopped, a still-valid token continues to be accepted by
-  both business APIs.
+- **SC-002**: With Authentication API stopped in the Compose deployment, a still-valid token
+  continues to be accepted by both business APIs.
 - **SC-003**: 100% of tested invalid-token cases — no token, forged signature, expired,
   wrong issuer, wrong audience, unexpected algorithm — are answered `401 Unauthorized` by both
   business APIs, with no token or key detail in the response.
@@ -216,10 +228,14 @@ This feature MUST NOT introduce:
   protected endpoints that demonstrate validation; they carry no business capability yet.
 - The only role in existence is `Administrator`; "insufficient role" scenarios use validly signed
   tokens carrying a different role, produced with a disposable test key pair.
+- Authentication API issues a single audience value, unchanged from Phase 1; both business APIs
+  expect that same value, so a single token is valid on both. Per-API audiences are not
+  introduced.
 - A short clock tolerance, on the order of seconds and far below the 15-minute token lifetime,
   is used; the exact value is chosen during planning and applied identically to both APIs.
 - The public verification material is delivered to the business APIs through operator-supplied
   external configuration; manual replacement of that configuration is the only key-change
   mechanism.
-- The final four-service Compose topology and reverse-proxy routing remain Phase 8 work; this
-  phase needs only enough hosting to demonstrate and verify validation.
+- The final four-service Compose topology, reverse-proxy routing, and final acceptance remain
+  Phase 8 work; this phase adds only the two business API services to Compose, each reachable
+  directly for demonstration and verification.
