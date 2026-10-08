@@ -227,7 +227,7 @@ Una fase sólo podrá marcarse `[x]` cuando se hayan cumplido todos sus criterio
 | 2 | Validación JWT en APIs consumidoras | `[x]` | Phase 1 | `G2` |
 | 3 | Administración de usuarios y roles | `[x]` | Phase 1-2 | `G3` |
 | 4 | Refresh tokens + sesiones + logout | `[x]` | Phase 1-3 | `G4` |
-| 5 | Cambio de contraseña | `[ ]` | Phase 1-4 | `G5` |
+| 5 | Cambio de contraseña | `[x]` | Phase 1-4 | `G5` |
 | 6 | Recuperación de contraseña + email | `[ ]` | Phase 1-5 | `G6` |
 | 7 | Security hardening | `[ ]` | Phase 1-6 | `G7` |
 | 8 | Operación + integración + validación final | `[ ]` | Phase 1-7 | `G8` |
@@ -1471,7 +1471,7 @@ Actualizar esta sección al finalizar cada sesión relevante.
 | 2026-10-08 | Phase 2 | Complete — G2 approved | Validación JWT local en API A y API B (consumidor de referencia `ReferenceConsumer.Api` desplegado como `api-a`/`api-b`), rechazo `401`, autorización por rol `403`, clave pública únicamente, disponibilidad con Auth API detenida | Build 0 warnings; 31/31 tests; `tests/acceptance/phase-2.sh` ALL PASS (incluye regresión `phase-1.sh`) | Commit de cierre `[Phase 2] Close Gate G2` | Aprobación explícita de G2 por el responsable del proyecto el 2026-10-08; evidencia en `docs/phase-2-operations.md`; autorizado por DEC-009 y la enmienda 1.1 de Technical Constraints §5.2; proxy, frontend y no exposición directa de backends permanecen en Phase 8 |
 | 2026-10-08 | Phase 3 | Complete — G3 approved | Administración de usuarios y roles en `/api/admin/*` (11 operaciones), RBAC con política `Administrator` sobre JWT validado localmente, estado habilitado (`ApplicationUser.IsEnabled`) que impide nuevos logins con el `401` genérico, reemplazo completo del conjunto de roles, protección del último administrador habilitado y del rol `Administrator`, también bajo concurrencia | Build 0 warnings; 59/59 tests; `tests/acceptance/phase-3.sh` ALL PASS (incluye regresión `phase-2.sh` y `phase-1.sh`) | Commit de cierre `[Phase 3] Close Gate G3` | Aprobación explícita de G3 por el responsable del proyecto el 2026-10-08; evidencia en `docs/phase-3-operations.md`; revisión de convergencia sin hallazgos; nueva configuración requerida `Jwt:ClockSkewSeconds` en `auth-api`; disable sólo impide nuevos logins: revocación de sesiones y refresh permanecen en Phase 4 |
 | 2026-10-08 | Phase 4 | Complete — G4 approved | Sesiones renovables en Authentication API: cookie `auth_refresh` (HttpOnly, SameSite=Strict, Secure en producción) emitida en login, `POST /api/auth/refresh` con rotación en la misma familia y expiración absoluta fija, detección de replay con revocación de la familia, consumo concurrente de una sola credencial, `POST /api/auth/logout` idempotente, `POST /api/admin/users/{id}/revoke-sessions`, revocación de todas las familias al deshabilitar, validación exacta de Origin y estado en SQLite con migración al arrancar; sin blacklist de JWT | Build 0 warnings; 104/104 tests; `tests/acceptance/phase-4.sh` ALL PASS (incluye regresión `phase-3.sh`, `phase-2.sh` y `phase-1.sh`) | Commit de cierre `[Phase 4] Close Gate G4` | Aprobación explícita de G4 por el responsable del proyecto el 2026-10-08; evidencia en `docs/phase-4-operations.md`; revisión de convergencia sin hallazgos pendientes; nueva configuración requerida `Security:FrontendOrigin` (`AUTH_FRONTEND_ORIGIN`) y opcional `RefreshSession:LifetimeDays` (7 por defecto); rate limiting de refresh diferido a Phase 7 |
-| — | Phase 5 | Pending | — | — | — | — |
+| 2026-10-08 | Phase 5 | Complete — G5 approved | `POST /api/auth/change-password` para cualquier usuario autenticado sobre su propia cuenta (cuenta tomada sólo del `sub`): verificación de la password actual, política y actualización mediante Identity (`ChangePasswordAsync`), revocación atómica (misma transacción) de las demás familias renovables con motivo `PasswordChanged` conservando la familia de la cookie `auth_refresh` utilizable del mismo usuario (sin cookie utilizable se revocan todas), el administrador inicial `admin/admin` puede retirar su credencial sin email y el nuevo secreto sobrevive al restart; sin blacklist de JWT, sin migración ni infraestructura de email | Build 0 warnings; 115/115 tests; `tests/acceptance/phase-5.sh` ALL PASS (incluye regresión `phase-4.sh`, `phase-3.sh`, `phase-2.sh` y `phase-1.sh`) | Commit de cierre `[Phase 5] Close Gate G5` | Aprobación explícita de G5 por el responsable del proyecto el 2026-10-08; evidencia en `docs/phase-5-operations.md`; revisión de convergencia sin hallazgos; sin configuración nueva; un fallo de password actual no cuenta para el lockout y el rate limiting de este endpoint queda para Phase 7 |
 | — | Phase 6 | Pending | — | — | — | — |
 | — | Phase 7 | Pending | — | — | — | — |
 | — | Phase 8 | Pending | — | — | — | — |
@@ -1657,8 +1657,9 @@ Phase 1: COMPLETE (Gate G1 approved 2026-10-07)
 Phase 2: COMPLETE (Gate G2 approved 2026-10-08)
 Phase 3: COMPLETE (Gate G3 approved 2026-10-08)
 Phase 4: COMPLETE (Gate G4 approved 2026-10-08)
-Current phase: Phase 5
-Current gate: G5
+Phase 5: COMPLETE (Gate G5 approved 2026-10-08)
+Current phase: Phase 6
+Current gate: G6
 ```
 
 ## Próxima acción
@@ -1666,8 +1667,8 @@ Current gate: G5
 Preparar la especificación Spec-Kit correspondiente a:
 
 ```text
-Phase 5
-Cambio de contraseña
+Phase 6
+Recuperación de contraseña + email
 ```
 
-asegurando que `spec.md`, `plan.md` y `tasks.md` no incorporen recuperación de contraseña, email ni otras capacidades pertenecientes a fases posteriores.
+asegurando que `spec.md`, `plan.md` y `tasks.md` no incorporen hardening de Phase 7 ni capacidades pertenecientes a fases posteriores.

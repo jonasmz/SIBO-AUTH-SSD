@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace Authentication.IntegrationTests.Infrastructure;
 
@@ -14,6 +15,7 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
     private readonly Dictionary<string, string?> _originalEnvironment = new();
 
     private readonly TimeProvider? _timeProvider;
+    private readonly CapturingLoggerProvider _logs = new();
 
     public AuthenticationApiFactory(
         string? connectionStringOverride = null,
@@ -21,7 +23,8 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
         int accessTokenLifetimeMinutes = 15,
         Phase1TestResources? sharedResources = null,
         int refreshSessionLifetimeDays = 7,
-        string? frontendOrigin = FrontendOrigin)
+        string? frontendOrigin = FrontendOrigin,
+        IReadOnlyDictionary<string, string>? additionalSettings = null)
     {
         _ownsResources = sharedResources is null;
         _resources = sharedResources ?? new Phase1TestResources();
@@ -34,7 +37,17 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
         SetEnvironmentVariable("Jwt__ClockSkewSeconds", "30");
         SetEnvironmentVariable("RefreshSession__LifetimeDays", refreshSessionLifetimeDays.ToString(System.Globalization.CultureInfo.InvariantCulture));
         SetEnvironmentVariable("Security__FrontendOrigin", frontendOrigin ?? string.Empty);
+
+        // Extra external settings such as a stricter Identity password policy
+        // (for example "Identity__Password__RequiredLength").
+        foreach (var (key, value) in additionalSettings ?? new Dictionary<string, string>())
+        {
+            SetEnvironmentVariable(key, value);
+        }
     }
+
+    /// <summary>Formatted log messages emitted by the host, for secret-scanning assertions.</summary>
+    public IReadOnlyList<string> CapturedLogs => _logs.Snapshot();
 
     public Phase1TestResources Resources => _resources;
 
@@ -53,6 +66,7 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+        builder.ConfigureLogging(logging => logging.AddProvider(_logs));
 
         if (_timeProvider is not null)
         {
@@ -87,5 +101,48 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
     {
         _originalEnvironment[key] = Environment.GetEnvironmentVariable(key);
         Environment.SetEnvironmentVariable(key, value);
+    }
+}
+
+internal sealed class CapturingLoggerProvider : ILoggerProvider
+{
+    private readonly List<string> _messages = [];
+
+    public IReadOnlyList<string> Snapshot()
+    {
+        lock (_messages)
+        {
+            return [.. _messages];
+        }
+    }
+
+    public ILogger CreateLogger(string categoryName) => new CapturingLogger(this);
+
+    public void Dispose()
+    {
+    }
+
+    private void Add(string message)
+    {
+        lock (_messages)
+        {
+            _messages.Add(message);
+        }
+    }
+
+    private sealed class CapturingLogger(CapturingLoggerProvider owner) : ILogger
+    {
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter) =>
+            owner.Add(formatter(state, exception) + (exception is null ? string.Empty : " " + exception));
     }
 }

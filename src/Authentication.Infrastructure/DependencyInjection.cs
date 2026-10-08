@@ -1,4 +1,5 @@
 using Authentication.Application.Features.Login;
+using Authentication.Application.Features.Passwords;
 using Authentication.Application.Features.Roles;
 using Authentication.Application.Features.Sessions;
 using Authentication.Application.Features.Users;
@@ -67,6 +68,7 @@ public static class DependencyInjection
         services.AddScoped<LogoutSessionHandler>();
         services.AddScoped<IUserAdministration, UserAdministration>();
         services.AddScoped<IRoleAdministration, RoleAdministration>();
+        services.AddScoped<IPasswordChange, PasswordChange>();
 
         services.AddDbContext<AuthenticationDbContext>(options =>
             options.UseSqlite(sqliteOptions.ConnectionString));

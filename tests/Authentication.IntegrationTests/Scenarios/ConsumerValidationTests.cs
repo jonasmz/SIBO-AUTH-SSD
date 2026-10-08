@@ -44,6 +44,35 @@ public sealed class ConsumerValidationTests
     }
 
     [Fact]
+    public async Task ConsumersKeepAcceptingAnUnexpiredTokenAfterAPasswordChange()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var auth = new AuthenticationApiFactory();
+        using var authClient = auth.CreateClient();
+        using var admin = AdminTestSupport.WithBearer(auth, await AdminTestSupport.AdministratorTokenAsync(authClient, cancellationToken));
+        _ = await AdminTestSupport.CreateUserAsync(admin, "member@example.test", "Passw0rd!", cancellationToken: cancellationToken);
+        var token = await AdminTestSupport.LoginAsync(authClient, "member@example.test", "Passw0rd!", cancellationToken);
+
+        using var apiA = new ReferenceConsumerFactory("api-a", auth.Resources.PublicKeyPem);
+        using var apiB = new ReferenceConsumerFactory("api-b", auth.Resources.PublicKeyPem);
+        using var clientA = apiA.CreateClient();
+        using var clientB = apiB.CreateClient();
+
+        using var change = await PasswordChangeTests.SendAsync(
+            authClient, PasswordChangeTests.Json("Passw0rd!", "N3w-Secret!"), token, cancellationToken);
+        Assert.Equal(HttpStatusCode.NoContent, change.StatusCode);
+
+        // The token issued before the change is still valid locally; neither consumer was changed.
+        foreach (var (client, service) in new[] { (clientA, "api-a"), (clientB, "api-b") })
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, "/api/caller");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using var response = await client.SendAsync(request, cancellationToken);
+            Assert.True(response.StatusCode == HttpStatusCode.OK, $"{service} rejected a pre-change token");
+        }
+    }
+
+    [Fact]
     public async Task ConsumersKeepAcceptingAnUnexpiredTokenAfterEverySessionRevocation()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
