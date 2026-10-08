@@ -56,9 +56,9 @@ refresh, administration, and JWKS remain in their own phases or excluded.
 
 | Gate | Pre-research | Post-design | Evidence |
 |---|---|---|---|
-| Baseline precedence and traceability | PASS* | PASS* | Spec and artifacts cite SRS FR-JWT-003/004/010–012, FR-KEY-005, FR-AUTHZ-003–005, NFR-TIME-003/004, NFR-DEPLOY-008/009, Roadmap §8/G2. *The consumer project is outside Technical Constraints §5.2. The project owner explicitly decided it on 2026-10-07, and it must be recorded as DEC-009 (see Complexity Tracking). |
+| Baseline precedence and traceability | PASS | PASS | Spec and artifacts cite SRS FR-JWT-003/004/010–012, FR-KEY-005, FR-AUTHZ-003–005, NFR-TIME-003/004, NFR-DEPLOY-008/009, Roadmap §8/G2. The consumer project is authorized by the project-owner-approved amendment 1.1 of Technical Constraints §5.2 (2026-10-07), recorded as DEC-009 in the Roadmap decision log. |
 | Eight-phase boundary | PASS | PASS | Only local validation, minimal authorization, and their deployment are designed. Refresh, administration, revocation, JWKS, proxy, and frontend are absent. |
-| Hexagonal dependencies and vertical slices | PASS | PASS | Authentication API structure is untouched. The consumer has one feature slice and no business core, so there are no layers to separate. It references no Authentication project. |
+| Hexagonal dependencies and vertical slices | PASS | PASS | Authentication API structure is untouched. The consumer has one feature slice and no business core, so there are no layers to separate, as amendment 1.1 of §5.2 prescribes. It references no Authentication project. |
 | Simplicity and dependency control | PASS | PASS | One new package, authorized for this purpose and documented here. One project deployed twice instead of two. No new test project, mock library, or shared library. |
 | Security by construction | PASS | PASS | IdentityModel validates through JwtBearer with a single algorithm and required signature/expiry. Only the public key is mounted, and private-key PEMs are rejected at startup. No error details or secrets appear in responses or logs. |
 | Current-behavior verification | PASS | PASS | Real tokens are validated by the real JwtBearer handler in both configurations. The end-to-end issuance → validation path is tested. Compose demonstrates Auth-API-down acceptance. Phase 1 suite and `phase-1.sh` are rerun as regression. |
@@ -181,17 +181,22 @@ tests/
 │   └── Scenarios/
 │       └── ConsumerValidationTests.cs
 └── acceptance/
+    ├── phase-1.sh                    # minimal change: compose commands target auth-api explicitly
     └── phase-2.sh
 ```
 
 **Structure Decision**: Authentication API keeps its four baseline projects unchanged. One
 additional product project, `ReferenceConsumer.Api`, hosts both Business API A and B
-demonstrations. The project owner decided this explicitly, as the documented exception below.
+demonstrations. The project owner approved this through amendment 1.1 of Technical Constraints §5.2.
 Consumer verification lives in the existing integration test project.
 
 ## Complexity Tracking
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| Fifth product project (`ReferenceConsumer.Api`) outside Technical Constraints §5.2 | Roadmap §8/G2 requires Business API A and B to validate tokens locally and run as Compose services. The real business APIs are separate repositories with no code yet. The project owner explicitly chose this option on 2026-10-07; record it as DEC-009 in the roadmap decision log during implementation. | Two projects duplicate identical code. Waiting for CanchaBackend/buffetBackend leaves G2 unclosable here. Test-only hosting was rejected by clarification Q2. |
-| Consumer without the hexagonal four-project split | It has no business logic or infrastructure boundary to protect. A layered split would be empty ceremony. | The four-layer structure adds projects with no current use (Constitution IV). |
+No constitutional violation requires a complexity exception. The one deviation from the original
+baseline structure is not an exception: it was authorized beforehand by the project-owner-approved
+amendment 1.1 of Technical Constraints §5.2 and recorded as DEC-009.
+
+| Item | Authority | Rationale |
+|------|-----------|-----------|
+| Fifth product project (`ReferenceConsumer.Api`) | Technical Constraints §5.2 amendment 1.1; Roadmap DEC-009 | Roadmap §8/G2 requires Business API A and B to validate tokens locally and run as Compose services; the real business APIs are separate repositories without code. |
+| Consumer without the four-project hexagonal split | Same amendment (single Minimal API, no layers) | It has no business logic or infrastructure boundary to protect; a layered split would be empty ceremony (Constitution IV). |

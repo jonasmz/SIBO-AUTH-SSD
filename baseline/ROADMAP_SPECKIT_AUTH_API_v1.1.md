@@ -1492,6 +1492,7 @@ Documentar aquí decisiones que alteren el roadmap sin necesariamente modificar 
 | DEC-006 | 2026-10-06 | Phase 4 | Sin blacklist de JWT | Mantener APIs consumidoras stateless | Ventana residual hasta `exp` |
 | DEC-007 | 2026-10-06 | Global | Persistencia crítica fuera del ciclo de vida del proyecto Compose | Evitar pérdida accidental por `docker compose down -v` | Bind mounts de host como referencia; `external` permitido |
 | DEC-008 | 2026-10-06 | Phase 8 | Backup/restore SQLite forma parte del gate final | La persistencia no sustituye una estrategia de recuperación | Restore probado antes de cierre |
+| DEC-009 | 2026-10-07 | Phase 2 | Proyecto `ReferenceConsumer.Api` desplegado como `api-a` y `api-b` | Las APIs de negocio reales son repositorios separados sin código; Roadmap §8/G2 exige validación local en servicios ejecutables | Enmienda 1.1 de Technical Constraints §5.2; sin capas hexagonales ni referencias a `Authentication.*` |
 
 ---
 

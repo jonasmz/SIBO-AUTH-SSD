@@ -12,9 +12,9 @@ externally supplied service name and the shared validation configuration.
 
 **Rationale**: The real business APIs (CanchaBackend and buffetBackend) are separate repositories
 without code. Technical Constraints §5.2 lists only the four `Authentication.*` product projects
-and two test projects, so a consumer host here is outside that baseline. The project owner
-explicitly chose this option on 2026-10-07 (to be recorded as DEC-009 in the roadmap decision
-log during implementation). One project deployed twice proves that two independent services
+and two test projects, so a consumer host here required amending that baseline first. The project owner
+explicitly chose this option on 2026-10-07 and approved amendment 1.1 of §5.2, recorded as DEC-009
+in the roadmap decision log. One project deployed twice proves that two independent services
 validate locally with identical policy, without duplicating code. The real business APIs later
 adopt the same validation contract.
 
@@ -61,8 +61,8 @@ describing why validation failed (FR-010).
 
 ## Clock Tolerance
 
-**Decision**: `Jwt:ClockSkewSeconds`, required, externally configured, default reference value
-`30`, validated to be between `0` and `60` inclusive. Compose supplies the same value to both
+**Decision**: `Jwt:ClockSkewSeconds`, required, externally configured (no default in code), reference value
+`30` supplied by deployment, validated to be between `0` and `60` inclusive. Compose supplies the same value to both
 consumers from one variable (`AUTH_JWT_CLOCK_SKEW_SECONDS`).
 
 **Rationale**: The JwtBearer default (5 minutes) would extend a 15-minute token by a third,
