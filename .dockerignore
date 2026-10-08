@@ -1,0 +1,14 @@
+.git/
+bin/
+obj/
+**/bin/
+**/obj/
+.env
+.env.local
+data/
+keys/
+*.db
+*.db-shm
+*.db-wal
+*.log
+coverage/

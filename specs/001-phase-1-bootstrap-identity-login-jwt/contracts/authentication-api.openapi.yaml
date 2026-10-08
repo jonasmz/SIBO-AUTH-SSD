@@ -1,0 +1,173 @@
+openapi: 3.1.0
+info:
+  title: Authentication API — Phase 1
+  version: 1.0.0-phase1
+  description: >-
+    Planning contract for Phase 1 bootstrap, login, access-token issuance, liveness,
+    and readiness. It intentionally excludes all later-phase endpoints and sessions.
+paths:
+  /api/auth/login:
+    post:
+      operationId: login
+      summary: Authenticate by email and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentication succeeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/InvalidCredentials'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /health/live:
+    get:
+      operationId: getLiveness
+      summary: Report process liveness
+      security: []
+      responses:
+        '200':
+          description: Process is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthyStatus'
+              example:
+                status: healthy
+  /health/ready:
+    get:
+      operationId: getReadiness
+      summary: Report service readiness
+      description: >-
+        Returns healthy only after successful initialization and while SQLite remains
+        available. Startup failure may terminate the process before this endpoint is served.
+      security: []
+      responses:
+        '200':
+          description: Initialization completed and SQLite is available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthyStatus'
+              example:
+                status: healthy
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+components:
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          format: password
+          writeOnly: true
+          minLength: 1
+    LoginResponse:
+      type: object
+      required:
+        - accessToken
+        - expiresAtUtc
+      properties:
+        accessToken:
+          type: string
+          minLength: 1
+          description: RS256-signed JWT; never persisted by Authentication API.
+        expiresAtUtc:
+          type: string
+          format: date-time
+          description: Absolute UTC expiration instant for the access token.
+    HealthyStatus:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          const: healthy
+    ProblemDetails:
+      type: object
+      required:
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+  responses:
+    BadRequest:
+      description: Request is malformed or missing required input
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: about:blank
+            title: Bad Request
+            status: 400
+            detail: The request is invalid.
+    InvalidCredentials:
+      description: >-
+        Credentials are invalid. Unknown email, wrong password, locked account, and
+        disabled account when that state exists use this identical external response.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: about:blank
+            title: Unauthorized
+            status: 401
+            detail: Invalid credentials.
+    ServiceUnavailable:
+      description: Service is not ready or a required current dependency is unavailable
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: about:blank
+            title: Service Unavailable
+            status: 503
+            detail: The service is not ready.
+    InternalError:
+      description: Unexpected server failure with no internal detail exposed
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: about:blank
+            title: Internal Server Error
+            status: 500
+            detail: An unexpected error occurred.
