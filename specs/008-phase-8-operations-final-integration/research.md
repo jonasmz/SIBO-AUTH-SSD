@@ -89,7 +89,9 @@ in the NFR-LOG-002 list and gain no event.
   `IsDevelopment()`, alongside `MapOpenApi()`. Options: `HideTestRequestButton = true`,
   `HideClientButton = true`, `PersistentAuthentication = false`, telemetry disabled, no
   authentication preset. In Production neither route exists (404 from auth-api) and Nginx routes
-  only `/auth/api/*`, so `/openapi` and `/scalar` are unreachable from outside twice over. The
+  `/auth/*` into `/api/auth/*` and `/auth/admin/*` into `/api/admin/*`, so `/auth/openapi/...` and
+  `/auth/scalar` resolve to routes that do not exist; documentation is unreachable from outside twice
+  over. The
   authorized-network exception is not implemented (spec: permitted, not required).
 - **Version**: 2.17.9 published 2026-09-24 (two weeks before planning), declares no package
   dependencies; 2.17.13 is newer than the project's two-week rule. `Microsoft.OpenApi`, pulled
@@ -103,12 +105,20 @@ in the NFR-LOG-002 list and gain no event.
   the operator's compiled static files (`${FRONTEND_STATIC_HOST_PATH:?}` → `/usr/share/nginx/html`),
   and the TLS certificate/key directory (`${FRONTEND_TLS_HOST_PATH:?}` → `/etc/nginx/tls`). No custom
   image is built. Routes per [contracts/deployment-topology.md](contracts/deployment-topology.md):
-  prefixes are stripped (`/auth/api/x` → `auth-api:8080/api/x`), only `/api/` subtrees are proxied,
-  everything else under a backend prefix is `404`, and `/` serves the static files with SPA
-  fallback to `index.html`.
-- **Refresh cookie**: auth-api keeps `Path=/api/auth`; Nginx `proxy_cookie_path /api/auth /auth/api/auth;`
-  rewrites it so the browser returns the cookie to `/auth/api/auth/refresh` and `/logout` (FR-011).
-  The Origin check is unchanged: `Security:FrontendOrigin` is the external origin.
+  the public Authentication API contract (spec FR-010a) is `/auth/<operation>` → `/api/auth/<operation>`
+  and `/auth/admin/<resource>` → `/api/admin/<resource>` (an `^~ /auth/admin/` location first, then
+  a regex location for the four limited operations, then `/auth/`); `/api-a/api/*` and `/api-b/api/*`
+  keep their prefixes and strip them; any other `/api-a/...`, `/api-b/...` is `404`; `/` serves the
+  static files with SPA fallback to `index.html`. Redundant or internal forms (`/auth/api/auth/login`,
+  `/auth/health/...`) translate into `/api/auth/...` paths that have no route and return `404`, so no
+  extra deny rules are needed.
+- **Refresh cookie**: auth-api keeps `Path=/api/auth`; Nginx `proxy_cookie_path /api/auth /auth;`
+  rewrites only the path on issue, rotation, and clearing, so the browser stores the cookie at
+  `Path=/auth` and returns it to `/auth/refresh` and `/auth/logout` (FR-011). Its other attributes are
+  untouched. It also accompanies `/auth/admin/*` requests, which ignore it. The Origin check is
+  unchanged: `Security:FrontendOrigin` is the external origin.
+- **Location headers**: created users and roles return `Location: /api/admin/...`; `proxy_redirect
+  /api/admin/ /auth/admin/;` rewrites them so no internal URL reaches the browser (FR-010a).
 - **First limiting layer**: the Phase 7 reference rules (zone per `$binary_remote_addr`, 60 r/min,
   burst 20, `429`) on the four sensitive routes; `X-Forwarded-For $remote_addr` and
   `X-Forwarded-Proto $scheme` overwritten; `client_max_body_size 16k`.
@@ -116,8 +126,10 @@ in the NFR-LOG-002 list and gain no event.
   (Constitution VII: HTTPS terminated at the proxy). Acceptance generates a disposable self-signed
   certificate.
 - **Alternatives**: A custom frontend image (would embed product files; the clarification makes
-  them operator input); path-preserving routing with an app-side prefix (changes auth-api routes,
-  FR-023); configurable cookie path in the app (new setting where the proxy already solves it).
+  them operator input); public `/auth/api/...` paths mirroring the internal ones (redundant, rejected
+  by the clarification); changing auth-api routes or adding an app-side path base (changes the
+  Phase 1–7 contracts, FR-010a/FR-023); a configurable cookie path in the app (new setting where the
+  proxy already solves it).
 
 ## 9. Internal network and proxy trust (FR-012, FR-014)
 

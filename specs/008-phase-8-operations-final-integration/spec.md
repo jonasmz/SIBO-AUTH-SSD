@@ -10,6 +10,7 @@
 ### Session 2026-10-08
 
 - Q: Where does the Angular application served by the frontend service come from, since the repository has neither its source nor its build? → A: The project owner supplies the compiled static files as an input at a configurable location; Phase 8 delivers the frontend service, its proxy configuration, and acceptance, using a minimal static test page that is not a product.
+- Q: What public URL contract does Authentication API have behind the frontend proxy? → A: The public prefix is `/auth` and the internal `/api/auth` and `/api/admin` prefixes are never exposed: `/auth/<operation>` maps to `/api/auth/<operation>` and `/auth/admin/<resource>` maps to `/api/admin/<resource>`. The proxy translates them; the .NET routes and the Phase 1–7 API contracts are unchanged. Redundant public URLs such as `/auth/api/auth/login` are not served. The refresh cookie's internal `Path=/api/auth` becomes the public `Path=/auth`. `/api-a/*` and `/api-b/*` keep their existing prefixes.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -74,17 +75,26 @@ isolation, and the working initial administrator, using only `docker compose up`
    authentication requests reach Authentication API, its Business API A requests reach API A, and its
    Business API B requests reach API B, each through the frontend service's reverse proxy only, and the
    application files are served from that same origin.
-3. **Given** the production configuration, **When** the host's network interfaces are probed, **Then**
+3. **Given** the public Authentication API URLs `/auth/login`, `/auth/refresh`, `/auth/logout`,
+   `/auth/change-password`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/admin/users…`, and
+   `/auth/admin/roles…`, **When** they are requested through the entry point, **Then** each reaches the
+   unchanged internal route (`/api/auth/…` or `/api/admin/…`) and answers exactly as that route does,
+   any URL the service returns (such as the location of a created resource) is expressed in the public
+   form, and redundant forms such as `/auth/api/auth/login` and internal-only routes (health,
+   documentation) are not served through the entry point.
+4. **Given** the production configuration, **When** the host's network interfaces are probed, **Then**
    no backend service's port is reachable directly from outside; only the frontend entry point is.
-4. **Given** the deployment, **When** the mounted files of each service are inspected, **Then** the
+5. **Given** the deployment, **When** the mounted files of each service are inspected, **Then** the
    Business APIs hold the public key only, Authentication API holds the private key, and the browser
    never receives it.
-5. **Given** a request through the entry point, **When** Authentication API evaluates it, **Then**
+6. **Given** a request through the entry point, **When** Authentication API evaluates it, **Then**
    forwarded-header trust, request limits, and the origin check behave exactly as verified in Phase 7,
    including the first limiting layer at the proxy.
-6. **Given** a login, refresh, and logout performed through the entry point, **When** the browser
-   exchanges the refresh cookie, **Then** the cookie is sent back to the refresh and logout routes
-   under the browser-visible paths and the full session lifecycle works.
+7. **Given** a login, refresh, and logout performed through the public URLs, **When** the browser
+   exchanges the refresh cookie, **Then** the browser receives it with `Path=/auth` and its unchanged
+   `HttpOnly`, `Secure`, and `SameSite=Strict` attributes, sends it back on `/auth/refresh` and
+   `/auth/logout`, the refresh rotates it, and logout clears it under the same public path so the old
+   value can no longer renew.
 
 ---
 
@@ -136,8 +146,11 @@ production-equivalent stack and the regression of Phases 1–7, and review the r
 1. **Given** empty external storage, **When** the stack starts, **Then** the schema exists and the
    initial administrator signs in; the administrator replaces the initial password; creates a user and
    assigns a role; that user signs in and both Business APIs accept the token.
-2. **Given** that user's session, **When** the refresh credential is used, **Then** it rotates; after
-   logout the old credential can no longer renew; the user signs in again.
+2. **Given** that user's session, obtained through `/auth/login`, **When** the refresh credential is
+   used through `/auth/refresh`, **Then** it rotates and the browser cookie carries `Path=/auth` with
+   its security attributes; after `/auth/logout` the cookie is cleared under `Path=/auth` and the old
+   credential can no longer renew; the user signs in again. Every step uses only the public `/auth/*`
+   and `/auth/admin/*` URLs, and a redundant URL such as `/auth/api/auth/login` is refused.
 3. **Given** the user requests password recovery and receives the email, **When** the reset is
    completed, **Then** the previous renewable sessions are revoked and the new password works.
 4. **Given** the administrator disables the user, **Then** a new login is refused; **Given** repeated
@@ -199,11 +212,21 @@ production-equivalent stack and the regression of Phases 1–7, and review the r
   backup, or observability service.
 - **FR-010**: The frontend service MUST serve the application's static files and act as the reverse proxy,
   so that the browser uses a single external origin and reaches Authentication API, API A, and API B
-  only through it, under the browser-visible path prefixes `/auth`, `/api-a`, and `/api-b` (exact paths
-  are configurable and not a functional contract).
+  only through it, under the browser-visible path prefixes `/auth`, `/api-a`, and `/api-b`.
+- **FR-010a**: The public Authentication API URLs MUST use the `/auth` prefix without exposing the
+  internal `/api/auth` or `/api/admin` prefixes: `/auth/<operation>` MUST reach `/api/auth/<operation>`
+  (login, refresh, logout, change-password, forgot-password, reset-password) and `/auth/admin/<resource>`
+  MUST reach `/api/admin/<resource>` (every user and role administration route, including its path
+  parameters and sub-resources). The proxy MUST perform this translation; the Authentication API endpoint
+  definitions and the Phase 1–7 API contracts MUST NOT change. URLs the service returns to the browser
+  (such as a created resource's location) MUST be translated to the public form. Redundant public forms
+  such as `/auth/api/auth/login`, and routes not listed here (health, documentation), MUST NOT be served
+  through the entry point. `/api-a/*` and `/api-b/*` keep their existing prefixes.
 - **FR-011**: The browser flows that depend on the refresh cookie (login, refresh, logout) MUST work
-  end to end through the entry point, including the cookie being returned on the browser-visible
-  routes.
+  end to end through the public URLs. The proxy MUST rewrite the cookie's internal `Path=/api/auth` to
+  the public `Path=/auth` on issue, rotation, and clearing, preserving its name and its `HttpOnly`,
+  `Secure`, `SameSite=Strict`, and expiry attributes, so the browser returns it on `/auth/refresh` and
+  `/auth/logout`; the Phase 7 origin, CSRF, and trusted-proxy protections MUST keep applying unchanged.
 - **FR-012**: In the production configuration no backend service MUST publish a port to the host; the
   backends MUST share an internal network with the frontend service, and only the entry point is
   externally reachable.
@@ -305,8 +328,11 @@ merged to `main`), so its prerequisite does not block this specification.
 - **SC-003**: From empty external storage, `docker compose up -d` alone yields exactly four permanent
   services, a working initial administrator, and no migration or bootstrap step.
 - **SC-004**: Routing through the single entry point works for the application files, Authentication API,
-  API A, and API B, no backend port is reachable from outside in the production configuration, and the
-  refresh-cookie lifecycle works through that origin.
+  API A, and API B; every Authentication API operation answers through its public `/auth/*` or
+  `/auth/admin/*` URL exactly as through its internal route, while redundant forms such as
+  `/auth/api/auth/login` are not served; no backend port is reachable from outside in the production
+  configuration; and the login → refresh → logout cycle works through that origin with the cookie
+  issued, returned, rotated, and cleared under `Path=/auth` with its security attributes intact.
 - **SC-005**: After restart, rebuild, recreation, and `docker compose down -v` plus a new start, 100% of
   the persisted users, roles, credentials, session state, keys, and token validation are intact.
 - **SC-006**: A backup taken during writes restores into a disposable environment, the service starts on
@@ -332,9 +358,13 @@ merged to `main`), so its prerequisite does not block this specification.
   creation, user enable and disable, and role assignment and removal.
 - The compiled Angular files, and the repository or pipeline that produces them, are outside this
   repository; changes to the application itself belong to the frontend project and are not tracked here.
-- Browser-visible path prefixes are configurable (SRS §4.2); how a prefix maps to the service's own
-  routes, and the cookie path that results, are design contracts settled in planning, provided the full
-  login, refresh, and logout lifecycle works through the single origin.
+- Browser-visible path prefixes remain configurable in the proxy configuration (SRS §4.2); the
+  reference deployment fixes the public Authentication API contract as `/auth/*` and `/auth/admin/*`
+  (FR-010a) with the cookie at `Path=/auth`. The cookie therefore also accompanies `/auth/admin/*`
+  requests, which ignore it; its security attributes and the origin check are what protect it.
+- The OpenAPI contract published in Development describes the internal .NET routes (`/api/auth/*`,
+  `/api/admin/*`), which are the API contract; the public `/auth` mapping is a deployment contract
+  documented with the operations guide.
 - In production the contract and viewer are simply not served by Authentication API and not routed by
   the proxy; an authorized-network exception is permitted but not required.
 - Health endpoints are for the platform and the proxy's own checks and are not routed to the Internet.

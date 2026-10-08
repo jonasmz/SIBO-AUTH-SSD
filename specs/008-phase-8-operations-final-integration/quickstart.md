@@ -32,13 +32,21 @@ lines, in order:
 
 1. Empty storage → exactly four services; schema and administrator created; `/health/ready` OK
    (checked from inside the network).
-2. Static test page served at `/`; `/auth/health/ready`, `/auth/openapi/v1.json`, `/auth/scalar` → 404.
+2. Static test page served at `/`. URL translation: each public URL of the contract table in
+   [contracts/deployment-topology.md](contracts/deployment-topology.md) reaches its internal route
+   (it answers with that route's own status and body shape, e.g. `401` problem details for a bad login,
+   never the static page or a proxy `404`), a created user's `Location` starts with `/auth/admin/users/`, and
+   `/auth/api/auth/login`, `/auth/health/ready`, `/auth/openapi/v1.json`, `/auth/scalar`, and
+   `/api-a/health/live` → 404.
 3. Backend ports not reachable from the host; consumers' mounts hold no private key.
-4. E2E through the entry point: admin login and password change; user + role; user login; API A
-   and API B accept the token; refresh rotates with the cookie on `/auth/api/auth/refresh`; replay
-   refused; logout; re-login; forgot (mail sink) and reset; previous sessions revoked; disable →
-   login refused; lockout, recovery after moving the persisted lockout end; application `429` and
-   proxy `429`.
+4. E2E through the public URLs only (`/auth/*`, `/auth/admin/*`, `/api-a/api/*`, `/api-b/api/*`),
+   with a cookie jar acting as the browser: admin login and password change; user + role; user login
+   whose `Set-Cookie` is `auth_refresh` with `Path=/auth`, `HttpOnly`, `Secure`, `SameSite=Strict`;
+   API A and API B accept the token; `/auth/refresh` sends the jar's cookie, rotates it (new value,
+   same public path and attributes); replay of the old value refused; `/auth/logout` clears it with
+   `Path=/auth` and the cleared jar can no longer refresh; refresh from a foreign `Origin` refused;
+   re-login; forgot (mail sink) and reset; previous sessions revoked; disable → login refused;
+   lockout, recovery after moving the persisted lockout end; application `429` and proxy `429`.
 5. Log file `auth-<utc-date>.log` exists on the host with every NFR-LOG-002 event, UTC time and
    trace; no secret in console or file.
 6. `restart`, `up --build`, `up --force-recreate`, then `down -v` + `up -d`: database, key ring,

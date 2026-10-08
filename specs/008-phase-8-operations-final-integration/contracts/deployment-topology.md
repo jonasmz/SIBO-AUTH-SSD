@@ -17,12 +17,49 @@ Default network subnet `${AUTH_INTERNAL_SUBNET:-172.30.80.0/24}`; frontend addre
 
 | Browser path | Upstream | Notes |
 |---|---|---|
-| `/` and any other path | static files, SPA fallback `index.html` | operator-supplied compiled Angular files |
-| `/auth/api/...` | `http://auth-api:8080/api/...` | prefix stripped; first limiting layer on `/auth/api/auth/{login,refresh,forgot-password,reset-password}`; `proxy_cookie_path /api/auth /auth/api/auth` |
-| `/api-a/api/...` | `http://api-a:8080/api/...` | prefix stripped |
-| `/api-b/api/...` | `http://api-b:8080/api/...` | prefix stripped |
-| any other `/auth/...`, `/api-a/...`, `/api-b/...` | `404` | health, OpenAPI, Scalar never routed |
+| `/` and any path outside the prefixes below | static files, SPA fallback `index.html` | operator-supplied compiled Angular files |
+| `/auth/admin/<resource>` | `http://auth-api:8080/api/admin/<resource>` | all user and role administration routes, path parameters and sub-resources kept; `Location` headers translated `/api/admin/` → `/auth/admin/` |
+| `/auth/login`, `/auth/refresh`, `/auth/forgot-password`, `/auth/reset-password` | `http://auth-api:8080/api/auth/<same>` | first limiting layer applies |
+| `/auth/<operation>` (`logout`, `change-password`) | `http://auth-api:8080/api/auth/<operation>` | |
+| `/api-a/api/...` | `http://api-a:8080/api/...` | existing prefix kept, prefix stripped |
+| `/api-b/api/...` | `http://api-b:8080/api/...` | existing prefix kept, prefix stripped |
+| any other `/api-a/...`, `/api-b/...` | `404` | consumer health never routed |
 | `http://...` (port 80) | `301` to `https://` | |
+
+### Public Authentication API URL contract
+
+| Public URL | Internal route (unchanged) |
+|---|---|
+| `POST /auth/login` | `POST /api/auth/login` |
+| `POST /auth/refresh` | `POST /api/auth/refresh` |
+| `POST /auth/logout` | `POST /api/auth/logout` |
+| `POST /auth/change-password` | `POST /api/auth/change-password` |
+| `POST /auth/forgot-password` | `POST /api/auth/forgot-password` |
+| `POST /auth/reset-password` | `POST /api/auth/reset-password` |
+| `GET/POST /auth/admin/users`, `GET/PATCH /auth/admin/users/{id}`, `PUT /auth/admin/users/{id}/roles`, `POST /auth/admin/users/{id}/{enable,disable,revoke-sessions}` | the same paths under `/api/admin/` |
+| `GET/POST /auth/admin/roles`, `PATCH/DELETE /auth/admin/roles/{id}` | the same paths under `/api/admin/` |
+
+Translation rule: `/auth/admin/X` → `/api/admin/X`; otherwise `/auth/X` → `/api/auth/X`. Because the
+generic rule maps into `/api/auth/`, redundant or internal forms resolve to routes that do not exist
+and receive `404`: `/auth/api/auth/login` → `/api/auth/api/auth/login`, `/auth/health/ready` →
+`/api/auth/health/ready`, `/auth/openapi/v1.json`, `/auth/scalar`. Health, OpenAPI, and Scalar are
+therefore never reachable through the entry point.
+
+Reference Nginx shape (the implementation may differ in form, not in behavior):
+
+```nginx
+proxy_cookie_path /api/auth /auth;                       # cookie Path=/api/auth -> Path=/auth
+location ^~ /auth/admin/ {
+    proxy_pass     http://auth-api:8080/api/admin/;
+    proxy_redirect /api/admin/ /auth/admin/;            # Location of created resources
+}
+location ~ ^/auth/(login|refresh|forgot-password|reset-password)$ {
+    limit_req zone=auth_sensitive burst=20 nodelay;
+    rewrite ^/auth/(.*)$ /api/auth/$1 break;
+    proxy_pass http://auth-api:8080;
+}
+location /auth/ { proxy_pass http://auth-api:8080/api/auth/; }
+```
 
 Headers set (overwriting any client value) on every proxied request: `Host $host`,
 `X-Forwarded-For $remote_addr`, `X-Forwarded-Proto $scheme`. `client_max_body_size 16k`.
@@ -30,9 +67,14 @@ First layer: `limit_req_zone $binary_remote_addr` 60 r/min, burst 20, `limit_req
 
 ## Cookie contract through the entry point
 
-auth-api sets `auth_refresh` with `Path=/api/auth`; the browser receives `Path=/auth/api/auth` and
-returns it on `POST /auth/api/auth/refresh` and `POST /auth/api/auth/logout`. `HttpOnly`,
-`Secure`, `SameSite=Strict` unchanged. `Security__FrontendOrigin` = the external `https://` origin.
+auth-api keeps issuing `auth_refresh` with `Path=/api/auth` (unchanged Phase 4 behavior). The proxy
+rewrites only the path, so the browser receives `Path=/auth` on `/auth/login` and `/auth/refresh`, and
+the clearing cookie of `/auth/logout` also carries `Path=/auth` so it replaces the stored one. Name,
+value, `HttpOnly`, `Secure`, `SameSite=Strict`, `Expires`/`Max-Age` are not changed. The browser
+returns the cookie on `POST /auth/refresh` and `POST /auth/logout` (and, harmlessly, on
+`/auth/admin/*`, which ignores it). The Origin check is unchanged: `Security__FrontendOrigin` is the
+external `https://` origin, and refresh/logout from any other origin are still refused before the
+cookie is read. auth-api trusts forwarded headers only from the frontend's fixed address.
 
 ## Required operator inputs
 

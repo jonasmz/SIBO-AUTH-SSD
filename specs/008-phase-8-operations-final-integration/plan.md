@@ -17,8 +17,10 @@ added beside the existing ones. (2) `Microsoft.AspNetCore.OpenApi` (OpenAPI 3.1)
 `Scalar.AspNetCore` in read-only mode are mapped only in Development, with endpoint metadata and a
 Bearer security scheme; production neither maps nor routes them. (3) `compose.yml` becomes the
 production topology: four services, a `frontend` built from the official Nginx image that serves
-operator-supplied static files and terminates TLS, proxies `/auth/api/*`, `/api-a/api/*`,
-`/api-b/api/*` to the internal backends (rewriting the refresh-cookie path), applies the Phase 7
+operator-supplied static files and terminates TLS, publishes Authentication API as `/auth/*`
+(`/auth/<operation>` → `/api/auth/<operation>`, `/auth/admin/*` → `/api/admin/*`, internal routes
+unchanged), proxies `/api-a/api/*` and `/api-b/api/*`, rewrites the refresh cookie to `Path=/auth`
+and administrative `Location` headers to the public form, applies the Phase 7
 first limiting layer, and is the only published port; backends publish nothing and auth-api trusts
 only the frontend's fixed internal address. Direct backend ports used by acceptance move to a
 test-only override. (4) Documented SQLite backup (`sqlite3 .backup`, consistent under writes) and
@@ -73,7 +75,7 @@ scripts, operations documentation and Gate G8 evidence.
 
 | Gate | Pre-research | Post-design | Evidence |
 |---|---|---|---|
-| I. Baseline authority and traceability | PASS | PASS | Traces to SRS NFR-LOG-001–005, NFR-DOC-001–004, NFR-DEPLOY-001–014, NFR-DB-INIT, NFR-HEALTH-001–005, NFR-BACKUP-001–006, §4.2/4.3; Technical Constraints §12–15, §28–31, §33–39; Roadmap §14/G8. Implementation choices (cookie-path rewrite, fixed proxy address, log line format, backup tool) are recorded in [research.md](research.md) as choices, not requirements. |
+| I. Baseline authority and traceability | PASS | PASS | Public `/auth/*` URL contract fixed by the 2026-10-08 clarification (spec FR-010a/FR-011) within SRS §4.2's configurable prefixes; internal routes and Phase 1–7 contracts unchanged. Traces to SRS NFR-LOG-001–005, NFR-DOC-001–004, NFR-DEPLOY-001–014, NFR-DB-INIT, NFR-HEALTH-001–005, NFR-BACKUP-001–006, §4.2/4.3; Technical Constraints §12–15, §28–31, §33–39; Roadmap §14/G8. Implementation choices (cookie-path rewrite, fixed proxy address, log line format, backup tool) are recorded in [research.md](research.md) as choices, not requirements. |
 | II. Incremental vertical capabilities | PASS | PASS | Only Roadmap §14 scope: operations, documentation, deployment, persistence, backup, acceptance. No functional feature; missing events are logging obligations of NFR-LOG-002 assigned to §14.2. Earlier-phase defects, if found, are routed to their phase (FR-023). |
 | III. Hexagonal boundaries and feature slices | PASS | PASS | File provider and options in Infrastructure (`Logging/`), registered by the composition root; new events beside the Identity adapters that know them; OpenAPI/Scalar and endpoint metadata in Api only; Domain/Application untouched. `Program.cs` gains registration and environment-gated mapping only. |
 | IV. Deliberate simplicity and dependency control | PASS | PASS | Two baseline-authorized packages justified by FR-006/007; first-party provider mandated by TC §15.3 instead of Serilog/NLog; no image is built for the frontend (official Nginx + mounted config); no gateway, collector, scheduler, or backup container. |
@@ -119,10 +121,12 @@ No constitution violation requires a complexity exception.
 ```text
 browser ──HTTPS──> frontend (nginx, :443/:80→443, static files + reverse proxy)
                      /                → operator-supplied static files (SPA fallback)
-                     /auth/api/*      → auth-api:8080/api/*   (cookie Path /api/auth → /auth/api/auth)
+                     /auth/admin/*    → auth-api:8080/api/admin/*  (Location /api/admin/ → /auth/admin/)
+                     /auth/*          → auth-api:8080/api/auth/*   (cookie Path /api/auth → /auth)
                      /api-a/api/*     → api-a:8080/api/*
                      /api-b/api/*     → api-b:8080/api/*
-                     anything else under /auth, /api-a, /api-b → 404 (health, openapi, scalar unrouted)
+                     /auth/api/auth/login, /auth/health/*, /auth/openapi, /auth/scalar → 404 (map to no route)
+                     anything else under /api-a, /api-b → 404
 internal network (fixed subnet) ── auth-api trusts only the frontend's fixed address
 ```
 
