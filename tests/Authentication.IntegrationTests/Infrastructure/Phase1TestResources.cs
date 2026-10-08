@@ -17,6 +17,7 @@ public sealed class Phase1TestResources : IDisposable
 
         using var rsa = RSA.Create(3072);
         File.WriteAllText(PrivateKeyPath, rsa.ExportRSAPrivateKeyPem());
+        PublicKeyPem = rsa.ExportSubjectPublicKeyInfoPem();
     }
 
     public string RootPath { get; }
@@ -24,6 +25,8 @@ public sealed class Phase1TestResources : IDisposable
     public string DatabasePath { get; }
 
     public string PrivateKeyPath { get; }
+
+    public string PublicKeyPem { get; }
 
     public string ConnectionString => $"Data Source={DatabasePath}";
 

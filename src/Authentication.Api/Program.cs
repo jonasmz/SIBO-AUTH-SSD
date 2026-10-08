@@ -1,3 +1,5 @@
+using Authentication.Api.Features.Health;
+using Authentication.Api.Features.Login;
 using Authentication.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,7 +11,12 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 
-app.Run();
+await app.Services.InitializeAuthenticationInfrastructureAsync();
+
+app.MapHealthEndpoints();
+app.MapLoginEndpoint();
+
+await app.RunAsync();
 
 public partial class Program
 {
