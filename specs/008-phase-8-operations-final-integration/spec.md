@@ -5,6 +5,12 @@
 **Status**: Draft  
 **Input**: Phase 8 — Operations, Deployment Integration and Final Acceptance
 
+## Clarifications
+
+### Session 2026-10-08
+
+- Q: Where does the Angular application served by the frontend service come from, since the repository has neither its source nor its build? → A: The project owner supplies the compiled static files as an input at a configurable location; Phase 8 delivers the frontend service, its proxy configuration, and acceptance, using a minimal static test page that is not a product.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Operational Visibility and API Documentation (Priority: P1)
@@ -232,11 +238,12 @@ production-equivalent stack and the regression of Phases 1–7, and review the r
   recovery mechanism, refresh-token semantics, domain entity, functional table, permanent service, or
   frontend product feature, and MUST NOT redefine or weaken any baseline requirement; a defect found in
   an earlier phase MUST be traced to its originating requirement and corrected in that phase.
-- **FR-024**: [NEEDS CLARIFICATION: where does the Angular application served by the frontend service
-  come from? The repository contains no Angular source or compiled output. Does the project owner
-  supply the compiled static files as an input that the frontend service serves, with Phase 8
-  delivering the service, its proxy configuration, and acceptance with a minimal placeholder page; or
-  must Phase 8 itself produce a minimal application?]
+- **FR-024**: The Angular application's compiled static files MUST be an input supplied by the project
+  owner at a configurable location, and the frontend service MUST serve whatever compiled files are
+  supplied there without the phase building, changing, or adding any frontend functionality. The phase
+  delivers the service, its reverse-proxy configuration, and the acceptance procedure, and verifies
+  them with a minimal static test page that is part of the acceptance environment only and is not a
+  product deliverable.
 
 ### Applicable Non-Functional Requirements
 
@@ -323,6 +330,8 @@ merged to `main`), so its prerequisite does not block this specification.
   production-only (non-published backend ports) configuration, no operational backup and restore
   procedure or evidence, no end-to-end procedure, and no recorded events for login success, user
   creation, user enable and disable, and role assignment and removal.
+- The compiled Angular files, and the repository or pipeline that produces them, are outside this
+  repository; changes to the application itself belong to the frontend project and are not tracked here.
 - Browser-visible path prefixes are configurable (SRS §4.2); how a prefix maps to the service's own
   routes, and the cookie path that results, are design contracts settled in planning, provided the full
   login, refresh, and logout lifecycle works through the single origin.

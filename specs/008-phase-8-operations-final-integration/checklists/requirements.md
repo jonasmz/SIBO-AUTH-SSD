@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -34,8 +34,9 @@
 - Validation pass 1: all items pass except the intentional open marker. The platform terms the
   baseline itself names (Compose, Nginx-style reverse proxy, SQLite, OpenAPI) appear only as the
   required deployment vocabulary; no class, library, or file layout is prescribed.
-- One genuine ambiguity remains (FR-024): the origin of the Angular application, absent from the
-  repository. Resolve with `/speckit-clarify` before planning.
+- Clarification session 2026-10-08 resolved the one genuine ambiguity: the compiled Angular files are
+  an owner-supplied input at a configurable location, and the phase verifies the frontend service with
+  a minimal static test page that is not a product (FR-024).
 - Gate G7 is closed in the roadmap; no dependency blocks this phase.
 - The spec separates what exists from Phases 1–7 (events, readiness, startup initialization, proxy and
   limits, acceptance scripts) from genuine Phase 8 gaps (file logging, contract and viewer, frontend
