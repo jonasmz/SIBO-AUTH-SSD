@@ -260,12 +260,11 @@ in-script SMTP listener was rejected as fragile hand-written protocol code. Expo
 through a test endpoint was rejected as a production backdoor. An external SMTP account was
 rejected by TC §22.4.
 
-## 13. Observed issue outside this phase (reported, not changed)
+## 13. Phase 5 divergence found during planning (resolved before implementation)
 
-The merged Phase 5 implementation does not count an incorrect current password toward Identity
-lockout: `PasswordChange.cs` returns `InvalidCurrentPassword` without `AccessFailedAsync`,
-`PasswordChangeTests` asserts `AccessFailedCount == 0`, and `docs/phase-5-operations.md` documents
-"does not count". This contradicts Phase 5 `research.md` §3 and SRS NFR-SEC-BF-001. Per
-Constitution II it must be corrected in Phase 5, not absorbed here; Phase 6 neither depends on nor
-changes that behavior (the §9 helper refactor touches only the revocation loop). It is recorded for
-an explicit project decision.
+Planning found that the merged Phase 5 implementation did not count an incorrect current password
+toward Identity lockout, contradicting Phase 5 `research.md` §3 and SRS NFR-SEC-BF-001. Per
+Constitution II it was corrected in Phase 5, not absorbed here: the fix `[Phase 5] Fix: count an
+incorrect current password as a failed attempt` (PR #6) is merged into `main` and integrated into
+this branch. Phase 6 neither depends on that behavior nor changes it (the §9 helper refactor touches
+only the revocation loop), so no Phase 6 decision above changes.
