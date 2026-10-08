@@ -3,6 +3,7 @@ using System.Data.Common;
 using System.Text.Json;
 using Authentication.Application.Features.PasswordRecovery;
 using Authentication.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Authentication.Api.Features.PasswordRecovery;
@@ -20,6 +21,7 @@ public static class ForgotPasswordEndpoint
         HttpRequest httpRequest,
         ForgotPasswordHandler handler,
         RecoveryAddressLimiter addressLimiter,
+        ILookupNormalizer normalizer,
         InitializationState state,
         CancellationToken cancellationToken)
     {
@@ -35,7 +37,7 @@ public static class ForgotPasswordEndpoint
 
         // Counted for every submitted address, existing or not, so a 429 never reveals an account; it runs
         // after validation (a 400 consumes nothing) and before any lookup.
-        var attempt = addressLimiter.TryAcquire(request.Email!);
+        var attempt = addressLimiter.TryAcquire(normalizer.NormalizeEmail(request.Email!) ?? request.Email!);
         if (!attempt.Acquired)
         {
             await TooManyRequests.WriteAsync(httpRequest.HttpContext, RateLimitingRegistration.ForgotPasswordAddress, attempt.RetryAfter, logClientAddress: false);
