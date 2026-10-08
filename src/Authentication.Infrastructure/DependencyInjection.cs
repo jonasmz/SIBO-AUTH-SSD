@@ -1,10 +1,12 @@
 using Authentication.Application.Features.Login;
 using Authentication.Application.Features.Roles;
+using Authentication.Application.Features.Sessions;
 using Authentication.Application.Features.Users;
 using Authentication.Infrastructure.Health;
 using Authentication.Infrastructure.Identity;
 using Authentication.Infrastructure.Persistence;
 using Authentication.Infrastructure.Security;
+using Authentication.Infrastructure.Sessions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -35,11 +37,22 @@ public static class DependencyInjection
         {
             ConnectionString = configuration[$"{SqliteOptions.SectionName}:ConnectionString"] ?? string.Empty
         };
+        var refreshOptions = new RefreshSessionOptions
+        {
+            LifetimeDays = ParseLifetime(configuration[$"{RefreshSessionOptions.SectionName}:LifetimeDays"] ?? "7"),
+            FrontendOrigin = configuration["Security:FrontendOrigin"] ?? string.Empty
+        };
 
-        Validate(jwtOptions, sqliteOptions);
+        Validate(jwtOptions, sqliteOptions, refreshOptions);
 
         services.AddSingleton(Options.Create(jwtOptions));
         services.AddSingleton(Options.Create(sqliteOptions));
+        services.AddSingleton(Options.Create(refreshOptions));
+        services.AddSingleton<RefreshCredentialProtector>();
+        services.AddScoped<IRenewableSessionStore, RenewableSessionStore>();
+        services.AddScoped<IRefreshSessionRotation, RenewableSessionStore>();
+        services.AddScoped<IRefreshSessionLookup, RenewableSessionStore>();
+        services.AddScoped<ISessionFamilyRevocation, RenewableSessionStore>();
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<InitializationState>();
         services.AddSingleton<DatabaseInitializer>();
@@ -50,6 +63,8 @@ public static class DependencyInjection
         services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
         services.AddScoped<IIdentityCredentialValidator, IdentityCredentialValidator>();
         services.AddScoped<LoginHandler>();
+        services.AddScoped<RefreshSessionHandler>();
+        services.AddScoped<LogoutSessionHandler>();
         services.AddScoped<IUserAdministration, UserAdministration>();
         services.AddScoped<IRoleAdministration, RoleAdministration>();
 
@@ -97,13 +112,15 @@ public static class DependencyInjection
         return int.TryParse(value, out var seconds) ? seconds : -1;
     }
 
-    private static void Validate(JwtOptions jwtOptions, SqliteOptions sqliteOptions)
+    private static void Validate(JwtOptions jwtOptions, SqliteOptions sqliteOptions, RefreshSessionOptions refreshOptions)
     {
         Require(!string.IsNullOrWhiteSpace(sqliteOptions.ConnectionString), $"{SqliteOptions.SectionName}:ConnectionString");
         Require(!string.IsNullOrWhiteSpace(jwtOptions.Issuer), $"{JwtOptions.SectionName}:Issuer");
         Require(!string.IsNullOrWhiteSpace(jwtOptions.Audience), $"{JwtOptions.SectionName}:Audience");
         Require(jwtOptions.AccessTokenLifetimeMinutes > 0, $"{JwtOptions.SectionName}:AccessTokenLifetimeMinutes");
         Require(jwtOptions.ClockSkewSeconds is >= 0 and <= 60, $"{JwtOptions.SectionName}:ClockSkewSeconds");
+        Require(RefreshSessionOptions.HasValidLifetime(refreshOptions.LifetimeDays), $"{RefreshSessionOptions.SectionName}:LifetimeDays");
+        Require(RefreshSessionOptions.HasValidFrontendOrigin(refreshOptions.FrontendOrigin), "Security:FrontendOrigin");
 
         var keySetting = $"{JwtOptions.SectionName}:PrivateKeyPath";
         Require(!string.IsNullOrWhiteSpace(jwtOptions.PrivateKeyPath), keySetting);

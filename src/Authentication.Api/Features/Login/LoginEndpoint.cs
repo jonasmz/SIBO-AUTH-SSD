@@ -1,6 +1,7 @@
 using System.Data.Common;
 using System.Text.Json;
 using Authentication.Application.Features.Login;
+using Authentication.Api.Features.Sessions;
 using Authentication.Infrastructure.Persistence;
 
 namespace Authentication.Api.Features.Login;
@@ -17,6 +18,7 @@ public static class LoginEndpoint
     private static async Task<IResult> HandleAsync(
         HttpRequest httpRequest,
         LoginHandler handler,
+        RefreshCookieWriter refreshCookieWriter,
         InitializationState state,
         CancellationToken cancellationToken)
     {
@@ -41,11 +43,14 @@ public static class LoginEndpoint
                 new LoginCommand(request.Email!, request.Password!),
                 cancellationToken);
 
-            return outcome.Succeeded
-                ? Results.Ok(new LoginResponse(
+            if (outcome.Succeeded)
+            {
+                refreshCookieWriter.Write(httpRequest.HttpContext.Response, outcome.RefreshCredential!, outcome.RefreshExpiresAtUtc!.Value);
+                return Results.Ok(new LoginResponse(
                     outcome.AccessToken!.EncodedToken,
-                    outcome.AccessToken.ExpiresAtUtc.UtcDateTime))
-                : Results.Problem(
+                    outcome.AccessToken.ExpiresAtUtc.UtcDateTime));
+            }
+            return Results.Problem(
                     statusCode: StatusCodes.Status401Unauthorized,
                     title: "Unauthorized",
                     detail: "Invalid credentials.");

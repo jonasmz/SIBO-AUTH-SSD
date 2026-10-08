@@ -17,6 +17,88 @@ namespace Authentication.Infrastructure.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
 
+            modelBuilder.Entity("Authentication.Domain.Sessions.RefreshCredential", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("ConsumedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FamilyId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReplacedByTokenId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("RevokedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("BLOB");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FamilyId");
+
+                    b.HasIndex("ReplacedByTokenId")
+                        .IsUnique();
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("RefreshCredentials", t =>
+                        {
+                            t.HasCheckConstraint("CK_RefreshCredentials_Expiry", "ExpiresAtUtc > CreatedAtUtc");
+
+                            t.HasCheckConstraint("CK_RefreshCredentials_HashLength", "length(TokenHash) = 32");
+
+                            t.HasCheckConstraint("CK_RefreshCredentials_Replacement", "ReplacedByTokenId IS NULL OR ConsumedAtUtc IS NOT NULL");
+                        });
+                });
+
+            modelBuilder.Entity("Authentication.Domain.Sessions.RenewableSessionFamily", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("RevocationReason")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset?>("RevokedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "RevokedAtUtc");
+
+                    b.ToTable("RenewableSessionFamilies", t =>
+                        {
+                            t.HasCheckConstraint("CK_RenewableSessionFamilies_Expiry", "ExpiresAtUtc > CreatedAtUtc");
+
+                            t.HasCheckConstraint("CK_RenewableSessionFamilies_Revocation", "(RevokedAtUtc IS NULL AND RevocationReason IS NULL) OR (RevokedAtUtc IS NOT NULL AND RevocationReason IS NOT NULL)");
+                        });
+                });
+
             modelBuilder.Entity("Authentication.Infrastructure.Identity.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
@@ -211,6 +293,29 @@ namespace Authentication.Infrastructure.Persistence.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("Authentication.Domain.Sessions.RefreshCredential", b =>
+                {
+                    b.HasOne("Authentication.Domain.Sessions.RenewableSessionFamily", null)
+                        .WithMany()
+                        .HasForeignKey("FamilyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Authentication.Domain.Sessions.RefreshCredential", null)
+                        .WithOne()
+                        .HasForeignKey("Authentication.Domain.Sessions.RefreshCredential", "ReplacedByTokenId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Authentication.Domain.Sessions.RenewableSessionFamily", b =>
+                {
+                    b.HasOne("Authentication.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

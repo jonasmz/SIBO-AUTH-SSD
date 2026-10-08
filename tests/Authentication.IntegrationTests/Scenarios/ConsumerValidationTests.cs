@@ -43,6 +43,81 @@ public sealed class ConsumerValidationTests
         await AssertCallerAsync(clientB, token, "api-b", cancellationToken);
     }
 
+    [Fact]
+    public async Task ConsumersKeepAcceptingAnUnexpiredTokenAfterEverySessionRevocation()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var auth = new AuthenticationApiFactory();
+        using var browser = auth.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { HandleCookies = false });
+        var adminToken = await AdminTestSupport.AdministratorTokenAsync(browser, cancellationToken);
+        using var admin = AdminTestSupport.WithBearer(auth, adminToken);
+        var user = await AdminTestSupport.CreateUserAsync(admin, "member@example.test", "Passw0rd!", cancellationToken: cancellationToken);
+
+        using var apiA = new ReferenceConsumerFactory("api-a", auth.Resources.PublicKeyPem);
+        using var apiB = new ReferenceConsumerFactory("api-b", auth.Resources.PublicKeyPem);
+        using var clientA = apiA.CreateClient();
+        using var clientB = apiB.CreateClient();
+
+        async Task<(string Token, string Cookie)> SignInAsync()
+        {
+            using var response = await browser.PostAsJsonAsync(
+                "/api/auth/login", new { email = "member@example.test", password = "Passw0rd!" }, cancellationToken);
+            response.EnsureSuccessStatusCode();
+            var token = (await response.Content.ReadFromJsonAsync<LoginBody>(cancellationToken))!.AccessToken;
+            return (token, response.Headers.GetValues("Set-Cookie").Single().Split(';', 2)[0].Split('=', 2)[1]);
+        }
+
+        async Task<HttpStatusCode> PostAsync(string path, string? cookie)
+        {
+            using var request = AuthenticationApiFactory.CreateBrowserRequest(HttpMethod.Post, path, cookie);
+            using var response = await browser.SendAsync(request, cancellationToken);
+            return response.StatusCode;
+        }
+
+        async Task AssertStillAcceptedAsync(string token)
+        {
+            foreach (var (client, service) in new[] { (clientA, "api-a"), (clientB, "api-b") })
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, "/api/caller");
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                using var response = await client.SendAsync(request, cancellationToken);
+                Assert.True(response.StatusCode == HttpStatusCode.OK, $"{service} rejected a pre-revocation token");
+            }
+        }
+
+        // Logout.
+        var (logoutToken, logoutCookie) = await SignInAsync();
+        Assert.Equal(HttpStatusCode.NoContent, await PostAsync("/api/auth/logout", logoutCookie));
+        Assert.Equal(HttpStatusCode.Unauthorized, await PostAsync("/api/auth/refresh", logoutCookie));
+        await AssertStillAcceptedAsync(logoutToken);
+
+        // Replay: reusing a consumed credential revokes the family.
+        var (replayToken, replayCookie) = await SignInAsync();
+        Assert.Equal(HttpStatusCode.OK, await PostAsync("/api/auth/refresh", replayCookie));
+        Assert.Equal(HttpStatusCode.Unauthorized, await PostAsync("/api/auth/refresh", replayCookie));
+        await AssertStillAcceptedAsync(replayToken);
+
+        // Administrative revocation.
+        var (adminRevokedToken, adminRevokedCookie) = await SignInAsync();
+        using (var revoke = await admin.PostAsync($"/api/admin/users/{user.Id}/revoke-sessions", null, cancellationToken))
+        {
+            Assert.Equal(HttpStatusCode.NoContent, revoke.StatusCode);
+        }
+
+        Assert.Equal(HttpStatusCode.Unauthorized, await PostAsync("/api/auth/refresh", adminRevokedCookie));
+        await AssertStillAcceptedAsync(adminRevokedToken);
+
+        // Disablement.
+        var (disabledToken, disabledCookie) = await SignInAsync();
+        using (var disable = await admin.PostAsync($"/api/admin/users/{user.Id}/disable", null, cancellationToken))
+        {
+            Assert.Equal(HttpStatusCode.OK, disable.StatusCode);
+        }
+
+        Assert.Equal(HttpStatusCode.Unauthorized, await PostAsync("/api/auth/refresh", disabledCookie));
+        await AssertStillAcceptedAsync(disabledToken);
+    }
+
     [Theory]
     [InlineData("Jwt:Issuer", "")]
     [InlineData("Jwt:Audience", " ")]

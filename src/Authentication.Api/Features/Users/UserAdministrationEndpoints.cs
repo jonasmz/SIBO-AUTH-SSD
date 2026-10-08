@@ -14,6 +14,7 @@ public static class UserAdministrationEndpoints
         group.MapPost("/users", CreateAsync);
         group.MapPatch("/users/{id}", UpdateAsync);
         group.MapPut("/users/{id}/roles", ReplaceRolesAsync);
+        group.MapPost("/users/{id}/revoke-sessions", RevokeSessionsAsync);
         group.MapPost("/users/{id}/enable", (string id, IUserAdministration users, CancellationToken cancellationToken) =>
             SetEnabledAsync(id, true, users, cancellationToken));
         group.MapPost("/users/{id}/disable", (string id, IUserAdministration users, CancellationToken cancellationToken) =>
@@ -28,6 +29,9 @@ public static class UserAdministrationEndpoints
         IUserAdministration users,
         CancellationToken cancellationToken) =>
         AdministrationResults.RunAsync(async () => (await users.SetEnabledAsync(id, enabled, cancellationToken)).ToOk());
+
+    private static Task<IResult> RevokeSessionsAsync(string id, IUserAdministration users, CancellationToken cancellationToken) =>
+        AdministrationResults.RunAsync(async () => (await users.RevokeSessionsAsync(id, cancellationToken)).ToNoContent());
 
     private static Task<IResult> ListAsync(IUserAdministration users, CancellationToken cancellationToken) =>
         AdministrationResults.RunAsync(async () => Results.Ok(await users.ListAsync(cancellationToken)));

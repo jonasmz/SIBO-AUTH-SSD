@@ -2,17 +2,21 @@ using System.Data;
 using Authentication.Application.Features.Administration;
 using Authentication.Application.Features.Users;
 using Authentication.Domain.Administration;
+using Authentication.Domain.Sessions;
 using Authentication.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace Authentication.Infrastructure.Identity;
 
-public sealed class UserAdministration(
+public sealed partial class UserAdministration(
     AuthenticationDbContext context,
     UserManager<ApplicationUser> userManager,
     RoleManager<IdentityRole<string>> roleManager,
-    TimeProvider timeProvider) : IUserAdministration
+    TimeProvider timeProvider,
+    ILogger<UserAdministration> logger) : IUserAdministration
 {
     private const string UserNotFound = "The user was not found.";
     private const string InvalidRequest = "The request is invalid.";
@@ -120,6 +124,7 @@ public sealed class UserAdministration(
             return NotFound();
         }
 
+        var revoked = 0;
         if (user.IsEnabled != enabled)
         {
             if (!enabled)
@@ -145,12 +150,59 @@ public sealed class UserAdministration(
             {
                 return Failure(updated);
             }
+
+            // Disabling ends every renewable session in the same transaction; enabling restores none.
+            if (!enabled)
+            {
+                revoked = await RevokeActiveFamiliesAsync(id, SessionRevocationReason.UserDisabled, cancellationToken);
+            }
         }
 
         await transaction.CommitAsync(cancellationToken);
+        if (revoked > 0)
+        {
+            LogSessionsRevoked(logger, id, revoked, nameof(SessionRevocationReason.UserDisabled), timeProvider.GetUtcNow(), Activity.Current?.TraceId.ToString(), Activity.Current?.SpanId.ToString());
+        }
 
         return await FindAsync(id, cancellationToken);
     }
+
+    public async Task<AdministrationResult<int>> RevokeSessionsAsync(string id, CancellationToken cancellationToken)
+    {
+        await using var transaction = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+
+        if (await userManager.FindByIdAsync(id) is null)
+        {
+            return new AdministrationResult<int>(AdministrationError.NotFound, UserNotFound);
+        }
+
+        var revoked = await RevokeActiveFamiliesAsync(id, SessionRevocationReason.Administrator, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        LogSessionsRevoked(logger, id, revoked, nameof(SessionRevocationReason.Administrator), timeProvider.GetUtcNow(), Activity.Current?.TraceId.ToString(), Activity.Current?.SpanId.ToString());
+
+        return new AdministrationResult<int>(revoked);
+    }
+
+    /// <summary>Revokes the user's active families inside the caller's transaction; returns how many changed.</summary>
+    private async Task<int> RevokeActiveFamiliesAsync(string userId, SessionRevocationReason reason, CancellationToken cancellationToken)
+    {
+        var now = timeProvider.GetUtcNow();
+        var families = await context.RenewableSessionFamilies
+            .Where(family => family.UserId == userId && family.RevokedAtUtc == null)
+            .ToListAsync(cancellationToken);
+        var active = families.Where(family => family.IsActive(now)).ToList();
+        foreach (var family in active)
+        {
+            family.Revoke(now, reason);
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        return active.Count;
+    }
+
+    [LoggerMessage(LogLevel.Information, "Renewable sessions of user {UserId} revoked ({Count} families, reason {Reason}) at {OccurredAtUtc:O}; trace {TraceId}, span {SpanId}.")]
+    private static partial void LogSessionsRevoked(ILogger logger, string userId, int count, string reason, DateTimeOffset occurredAtUtc, string? traceId, string? spanId);
 
     private Task<int> CountEnabledAdministratorsAsync(CancellationToken cancellationToken) =>
         (from assignment in context.UserRoles

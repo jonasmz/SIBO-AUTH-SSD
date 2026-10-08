@@ -19,4 +19,7 @@ public interface IUserAdministration
         string id,
         IReadOnlyList<string> roles,
         CancellationToken cancellationToken);
+
+    /// <summary>Revokes every active renewable-session family of an existing user; the value is the number revoked.</summary>
+    Task<AdministrationResult<int>> RevokeSessionsAsync(string id, CancellationToken cancellationToken);
 }

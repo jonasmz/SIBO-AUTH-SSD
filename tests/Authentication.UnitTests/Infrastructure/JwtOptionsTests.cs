@@ -48,7 +48,29 @@ public sealed class JwtOptionsTests
         }
     }
 
-    private static void Register(string privateKeyPath, string? clockSkewSeconds)
+    [Fact]
+    public void DefaultsRefreshLifetimeToSevenDays()
+    {
+        using var key = TemporaryKeyFile.Create();
+        Assert.Null(Record.Exception(() => Register(key.Path, "30", lifetimeDays: null)));
+    }
+
+    [Theory]
+    [InlineData("0", "https://frontend.test", "RefreshSession:LifetimeDays")]
+    [InlineData("7", "", "Security:FrontendOrigin")]
+    [InlineData("7", "not-an-origin", "Security:FrontendOrigin")]
+    public void RejectsInvalidRefreshConfigurationWithoutDisclosingValues(string lifetimeDays, string frontendOrigin, string setting)
+    {
+        using var key = TemporaryKeyFile.Create();
+        var exception = Assert.Throws<InvalidOperationException>(() => Register(key.Path, "30", lifetimeDays, frontendOrigin));
+        Assert.Contains(setting, exception.Message, StringComparison.Ordinal);
+        if (!string.IsNullOrEmpty(frontendOrigin))
+        {
+            Assert.DoesNotContain(frontendOrigin, exception.Message, StringComparison.Ordinal);
+        }
+    }
+
+    private static void Register(string privateKeyPath, string? clockSkewSeconds, string? lifetimeDays = "7", string? frontendOrigin = "https://frontend.test")
     {
         var settings = new Dictionary<string, string?>
         {
@@ -57,7 +79,9 @@ public sealed class JwtOptionsTests
             ["Jwt:Audience"] = "authentication-api-tests",
             ["Jwt:AccessTokenLifetimeMinutes"] = "15",
             ["Jwt:PrivateKeyPath"] = privateKeyPath,
-            ["Jwt:ClockSkewSeconds"] = clockSkewSeconds
+            ["Jwt:ClockSkewSeconds"] = clockSkewSeconds,
+            ["RefreshSession:LifetimeDays"] = lifetimeDays,
+            ["Security:FrontendOrigin"] = frontendOrigin
         };
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
 
