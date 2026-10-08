@@ -46,13 +46,15 @@ Choose an explicit host path outside the repository and outside Compose-managed 
 
 ```bash
 export AUTH_PHASE1_STATE=/tmp/auth-api-phase1-acceptance
-install -d -m 0700 "$AUTH_PHASE1_STATE/data"
-install -d -m 0700 "$AUTH_PHASE1_STATE/keys"
+# The container runs as a non-root UID that differs from your user; the disposable
+# directories are therefore world accessible. On real hosts chown them to UID 1654 instead.
+install -d -m 0777 "$AUTH_PHASE1_STATE/data"
+install -d -m 0755 "$AUTH_PHASE1_STATE/keys"
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 \
   -out "$AUTH_PHASE1_STATE/keys/jwt-private.pem"
 openssl pkey -in "$AUTH_PHASE1_STATE/keys/jwt-private.pem" -pubout \
   -out "$AUTH_PHASE1_STATE/keys/jwt-public.pem"
-chmod 0600 "$AUTH_PHASE1_STATE/keys/jwt-private.pem"
+chmod 0644 "$AUTH_PHASE1_STATE/keys/jwt-private.pem"  # disposable only; use 0600 + chown on real hosts
 chmod 0644 "$AUTH_PHASE1_STATE/keys/jwt-public.pem"
 export AUTH_SQLITE_HOST_PATH="$AUTH_PHASE1_STATE/data"
 export AUTH_RSA_HOST_PATH="$AUTH_PHASE1_STATE/keys"
@@ -68,7 +70,7 @@ must not appear in the repository, image, Compose environment values, or version
 ```bash
 docker compose up --build -d
 docker compose ps
-curl --fail --silent http://localhost:8080/health/live | jq .
+curl --fail --silent http://localhost:${AUTH_HTTP_PORT:-8080}/health/live | jq .
 curl --fail --silent http://localhost:8080/health/ready | jq .
 ```
 
@@ -142,11 +144,12 @@ Phase 1-scoped demonstration, not the final Phase 8 teardown acceptance.
 
 ## 6. Demonstrate Initialization Failure
 
-Use a second disposable location that the non-root container cannot write:
+Use a second disposable location that the non-root container cannot write
+(`tests/acceptance/phase-1.sh` automates sections 2–6):
 
 ```bash
 export AUTH_FAILURE_STATE=/tmp/auth-api-phase1-unwritable
-install -d -m 0500 "$AUTH_FAILURE_STATE"
+install -d -m 0555 "$AUTH_FAILURE_STATE"
 AUTH_SQLITE_HOST_PATH="$AUTH_FAILURE_STATE" docker compose up auth-api
 ```
 

@@ -8,7 +8,8 @@ namespace Authentication.IntegrationTests.Infrastructure;
 
 public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
 {
-    private readonly Phase1TestResources _resources = new();
+    private readonly Phase1TestResources _resources;
+    private readonly bool _ownsResources;
     private readonly Dictionary<string, string?> _originalEnvironment = new();
 
     private readonly TimeProvider? _timeProvider;
@@ -16,8 +17,11 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
     public AuthenticationApiFactory(
         string? connectionStringOverride = null,
         TimeProvider? timeProvider = null,
-        int accessTokenLifetimeMinutes = 15)
+        int accessTokenLifetimeMinutes = 15,
+        Phase1TestResources? sharedResources = null)
     {
+        _ownsResources = sharedResources is null;
+        _resources = sharedResources ?? new Phase1TestResources();
         _timeProvider = timeProvider;
         SetEnvironmentVariable("Persistence__ConnectionString", connectionStringOverride ?? _resources.ConnectionString);
         SetEnvironmentVariable("Jwt__Issuer", "https://auth-api.test");
@@ -54,7 +58,10 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
             }
 
             Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
-            _resources.Dispose();
+            if (_ownsResources)
+            {
+                _resources.Dispose();
+            }
         }
     }
 
