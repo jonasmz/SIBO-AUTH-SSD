@@ -73,7 +73,7 @@ one persistent renewable family whose raw credential exists only in a restrictiv
 ### Implementation for User Story 1
 
 - [ ] T017 [US1] Implement the focused Auth-owned session issuance operation that creates a family and initial credential atomically before a successful response in `src/Authentication.Infrastructure/Sessions/RenewableSessionStore.cs`.
-- [ ] T018 [US1] Extend successful-login orchestration to request session issuance only after existing credential, enabled, and lockout checks pass in `src/Authentication.Application/Features/Login/LoginHandler.cs`.
+- [ ] T018 [US1] Extend successful-login orchestration in `src/Authentication.Application/Features/Login/LoginHandler.cs` to request session issuance only after existing credential, enabled, and lockout checks pass, and extend `src/Authentication.Application/Features/Login/LoginOutcome.cs` to carry the issued opaque refresh value and absolute expiry to the API boundary without referencing HTTP, cookies, or ASP.NET Core types.
 - [ ] T019 [US1] Add browser-cookie creation with `auth_refresh`, `Path=/api/auth`, no Domain, `HttpOnly`, `SameSite=Strict`, absolute family expiry, and Production-only Secure behavior in `src/Authentication.Api/Features/Sessions/RefreshCookieWriter.cs`.
 - [ ] T020 [US1] Extend the login HTTP boundary to emit the refresh cookie while retaining the established `{ accessToken, expiresAtUtc }` body and generic credential failures in `src/Authentication.Api/Features/Login/LoginEndpoint.cs`.
 
