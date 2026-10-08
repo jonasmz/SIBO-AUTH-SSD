@@ -178,3 +178,12 @@ Task: Create explicit Login HTTP DTOs in src/Authentication.Api/Features/Login/L
 - All tasks use current-phase behavior only; no task authorizes refresh tokens, sessions, JWT validation in API A/B, management endpoints, password change/recovery, SMTP, JWKS, key rotation, rate limiting, or final topology work.
 - Program.cs remains a composition root. Identity/EF/SQLite/JWT implementations stay in Infrastructure; Application remains independent of Infrastructure; Domain receives no artificial Identity model.
 - A task is not complete merely because its checkbox is checked: it must meet its traced requirement, preserve existing tests, and satisfy its Phase 1 checkpoint.
+
+---
+
+## Phase 7: Convergence
+
+**Purpose**: Corrective work found by `/speckit-converge`; complete before the T035 Gate G1 verification so the closure evidence reflects the final code. T035 remains the governance/approval task and is not duplicated here.
+
+- [ ] T036 Make startup failure diagnostics actionable without exposing secrets in src/Authentication.Infrastructure/DependencyInjection.cs, src/Authentication.Infrastructure/Persistence/DatabaseInitializer.cs, and src/Authentication.Infrastructure/Security/JwtAccessTokenIssuer.cs: identify which required setting name (never its value) is invalid or unreadable, and log the failing initialization stage (migration or bootstrap) plus the SQLite error code, per NFR-002, NFR-DB-INIT-014, and spec Edge Cases (partial)
+- [ ] T037 Add a failing-then-passing configuration-failure scenario to tests/Authentication.IntegrationTests/Scenarios/BootstrapAndHealthTests.cs covering a missing private-key path and an unparsable PEM: startup terminates before readiness, the failure names the invalid setting, and neither the key path nor key material appears in the exception or logs, per plan: Verification Design scenario 4 and spec Edge Cases (partial)
