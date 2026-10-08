@@ -7,6 +7,7 @@ using Authentication.Application.Features.Users;
 using Authentication.Infrastructure.Email;
 using Authentication.Infrastructure.Health;
 using Authentication.Infrastructure.Identity;
+using Authentication.Infrastructure.Logging;
 using Authentication.Infrastructure.Persistence;
 using Authentication.Infrastructure.Security;
 using Authentication.Infrastructure.Sessions;
@@ -60,11 +61,17 @@ public static class DependencyInjection
         ValidateRecoveryInfrastructure(smtpOptions, dataProtectionOptions);
         ValidateLockoutOverrides(configuration);
 
+        // Persistent log files (Technical Constraints §15.6): the directory must be an existing, writable mount.
+        var fileLoggerOptions = PersistentFileLoggerOptions.FromConfiguration(configuration);
+        var invalidLogSetting = fileLoggerOptions.FirstInvalidSetting();
+        Require(invalidLogSetting is null, invalidLogSetting ?? PersistentFileLoggerOptions.SectionName);
+
         services.AddSingleton(Options.Create(jwtOptions));
         services.AddSingleton(Options.Create(sqliteOptions));
         services.AddSingleton(Options.Create(refreshOptions));
         services.AddSingleton(Options.Create(smtpOptions));
         services.AddSingleton(Options.Create(dataProtectionOptions));
+        services.AddSingleton(Options.Create(fileLoggerOptions));
         services.AddSingleton<RefreshCredentialProtector>();
         services.AddScoped<IRenewableSessionStore, RenewableSessionStore>();
         services.AddScoped<IRefreshSessionRotation, RenewableSessionStore>();

@@ -88,7 +88,8 @@ public sealed class JwtOptionsTests
             ["Smtp:Security"] = "None",
             ["Smtp:SenderAddress"] = "no-reply@auth.test",
             ["Smtp:SenderName"] = "Authentication API Tests",
-            ["DataProtection:KeysPath"] = Path.GetTempPath()
+            ["DataProtection:KeysPath"] = Path.GetTempPath(),
+            ["Logging:File:Directory"] = Path.GetTempPath()
         };
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
 

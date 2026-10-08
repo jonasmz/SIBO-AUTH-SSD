@@ -36,9 +36,9 @@ in US2 and extended by US3 and US4.
 **Purpose**: Introduce the two baseline-authorized packages and the test support the stories need,
 without changing behavior.
 
-- [ ] T001 Add `Microsoft.AspNetCore.OpenApi` `10.0.12` and `Scalar.AspNetCore` `2.17.9` to `Directory.Packages.props` and reference both only from `src/Authentication.Api/Authentication.Api.csproj`; pin the transitive `Microsoft.OpenApi` centrally at the version the restore resolves (central transitive pinning is enabled); no other package is added.
-- [ ] T002 [P] Add empty `Logging:File:Directory` and `Logging:File:RetentionDays` placeholders to `src/Authentication.Api/appsettings.json`, leaving existing `Logging:LogLevel` entries untouched.
-- [ ] T003 [P] Add test support: `tests/Authentication.UnitTests/Infrastructure/MutableTimeProvider.cs` (a settable `TimeProvider` for rotation and retention) and, in `tests/Authentication.IntegrationTests/Infrastructure/AuthenticationApiFactory.cs`, a temporary log directory supplied as `Logging__File__Directory` per resource set (overridable), reusing the existing `environment` option.
+- [X] T001 Add `Microsoft.AspNetCore.OpenApi` `10.0.12` and `Scalar.AspNetCore` `2.17.9` to `Directory.Packages.props` and reference both only from `src/Authentication.Api/Authentication.Api.csproj`; pin the transitive `Microsoft.OpenApi` centrally at the version the restore resolves (central transitive pinning is enabled); no other package is added.
+- [X] T002 [P] Add empty `Logging:File:Directory` and `Logging:File:RetentionDays` placeholders to `src/Authentication.Api/appsettings.json`, leaving existing `Logging:LogLevel` entries untouched.
+- [X] T003 [P] Add test support: `tests/Authentication.UnitTests/Infrastructure/MutableTimeProvider.cs` (a settable `TimeProvider` for rotation and retention) and, in `tests/Authentication.IntegrationTests/Infrastructure/AuthenticationApiFactory.cs`, a temporary log directory supplied as `Logging__File__Directory` per resource set (overridable), reusing the existing `environment` option.
 
 ---
 
@@ -48,7 +48,7 @@ without changing behavior.
 
 **⚠️ CRITICAL**: Complete this phase before the user stories.
 
-- [ ] T004 Add `src/Authentication.Infrastructure/Logging/PersistentFileLoggerOptions.cs` for `Logging:File:Directory` (required) and `Logging:File:RetentionDays` (default `30`, integer ≥ 1), and validate them at startup in `src/Authentication.Infrastructure/DependencyInjection.cs` with the existing `DataProtectionStorageOptions.IsUsableDirectory` probe: a missing, nonexistent, or unwritable directory or an invalid retention terminates startup naming only the setting and never echoing its value.
+- [X] T004 Add `src/Authentication.Infrastructure/Logging/PersistentFileLoggerOptions.cs` for `Logging:File:Directory` (required) and `Logging:File:RetentionDays` (default `30`, integer ≥ 1), and validate them at startup in `src/Authentication.Infrastructure/DependencyInjection.cs` with the existing `DataProtectionStorageOptions.IsUsableDirectory` probe: a missing, nonexistent, or unwritable directory or an invalid retention terminates startup naming only the setting and never echoing its value.
 
 **Checkpoint**: The new settings exist, are validated, and nothing else changes yet.
 
