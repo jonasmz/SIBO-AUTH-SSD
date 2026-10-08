@@ -52,8 +52,11 @@ Any refusal changes neither the password nor any session.
   API and at the consumers until it expires (15 minutes by default); there is no blacklist.
 - **No `Origin` check.** The operation is authorized by the `Authorization: Bearer` header, which
   browsers never attach automatically, so it is not reachable by cross-site requests.
-- **No throttling.** A wrong current password does not count toward Identity lockout. Rate limiting
-  belongs to Phase 7.
+- **Failed attempts and lockout.** An incorrect current password counts as a failed password attempt
+  through Identity (SRS NFR-SEC-BF-001), so the configured Identity lockout applies as it does for
+  login; only that counter changes, never the credential or any session. A new password rejected
+  by the policy is not a failed attempt, and a successful change does not reset the counter. The
+  operation adds no lockout check of its own, and further throttling belongs to Phase 7.
 - **Logging.** One `Information` event per change records the user id, number of revoked families,
   whether a session was kept, the UTC time, and trace/span ids. Passwords, hashes, security stamps,
   tokens, and cookie values never reach the logs.

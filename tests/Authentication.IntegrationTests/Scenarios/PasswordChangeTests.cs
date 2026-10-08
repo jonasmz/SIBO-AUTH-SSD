@@ -77,6 +77,9 @@ public sealed class PasswordChangeTests
         Assert.Contains("Invalid credentials.", wrongBody, StringComparison.Ordinal);
         Assert.DoesNotContain("not-the-password", wrongBody, StringComparison.Ordinal);
 
+        // An incorrect current password is a failed password attempt counted by Identity (SRS NFR-SEC-BF-001).
+        Assert.Equal(1, await AccessFailedCountAsync(factory, cancellationToken));
+
         // Shorter than the configured minimum length.
         using var weak = await SendAsync(client, Json(AdminTestSupport.AdministratorPassword, "abc"), token, cancellationToken);
         Assert.Equal(HttpStatusCode.BadRequest, weak.StatusCode);
@@ -84,14 +87,20 @@ public sealed class PasswordChangeTests
         Assert.Contains("The password does not satisfy the password policy.", weakBody, StringComparison.Ordinal);
         Assert.DoesNotContain("abc", weakBody.Replace("password", string.Empty, StringComparison.Ordinal), StringComparison.Ordinal);
 
-        // A wrong current password is not a failed login: it must not feed the Identity lockout counter.
-        using var scope = factory.Services.CreateScope();
-        var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-        var admin = await users.FindByEmailAsync(AdminTestSupport.AdministratorEmail);
-        Assert.Equal(0, admin!.AccessFailedCount);
+        // A new password that violates the policy is not a failed current-password attempt.
+        Assert.Equal(1, await AccessFailedCountAsync(factory, cancellationToken));
 
         await AssertLoginAsync(client, AdminTestSupport.AdministratorEmail, AdminTestSupport.AdministratorPassword, HttpStatusCode.OK, cancellationToken);
         await AssertLoginAsync(client, AdminTestSupport.AdministratorEmail, "abc", HttpStatusCode.Unauthorized, cancellationToken);
+
+        // The configured Identity lockout applies: five consecutive wrong current passwords lock the account.
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            using var rejected = await SendAsync(client, Json("not-the-password", NewPassword), token, cancellationToken);
+            Assert.Equal(HttpStatusCode.Unauthorized, rejected.StatusCode);
+        }
+
+        await AssertLoginAsync(client, AdminTestSupport.AdministratorEmail, AdminTestSupport.AdministratorPassword, HttpStatusCode.Unauthorized, cancellationToken);
     }
 
     [Fact]
@@ -140,6 +149,16 @@ public sealed class PasswordChangeTests
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         Assert.Contains("The service is not ready.", body, StringComparison.Ordinal);
         Assert.DoesNotContain("sqlite", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static async Task<int> AccessFailedCountAsync(AuthenticationApiFactory factory, CancellationToken cancellationToken)
+    {
+        using var scope = factory.Services.CreateScope();
+        var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var admin = await users.FindByEmailAsync(AdminTestSupport.AdministratorEmail);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return admin!.AccessFailedCount;
     }
 
     internal static string Json(string currentPassword, string newPassword) =>
