@@ -1,3 +1,4 @@
+using ReferenceConsumer.Api.Features.Caller;
 using ReferenceConsumer.Api.Features.Health;
 using ReferenceConsumer.Api.Security;
 
@@ -21,6 +22,7 @@ internal static class Program
         app.UseAuthorization();
 
         app.MapLivenessEndpoint();
+        app.MapCallerEndpoints();
 
         await app.RunAsync();
     }

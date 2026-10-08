@@ -19,3 +19,35 @@ services:
         source: ${AUTH_RSA_HOST_PATH:?set AUTH_RSA_HOST_PATH}
         target: /var/lib/auth-api/keys
         read_only: true
+
+  api-a:
+    image: reference-consumer-api:dev
+    build:
+      context: .
+      dockerfile: src/ReferenceConsumer.Api/Dockerfile
+    ports:
+      - "${API_A_HTTP_PORT:-8081}:8080"
+    environment: &consumer-environment
+      Jwt__Issuer: "${AUTH_JWT_ISSUER:?set AUTH_JWT_ISSUER}"
+      Jwt__Audience: "${AUTH_JWT_AUDIENCE:?set AUTH_JWT_AUDIENCE}"
+      Jwt__ClockSkewSeconds: "${AUTH_JWT_CLOCK_SKEW_SECONDS:-30}"
+      Jwt__PublicKeyPath: "/var/lib/consumer/jwt-public.pem"
+      Service__Name: api-a
+    volumes: &consumer-volumes
+      # Only the public key file is mounted; consumers never see the private key or SQLite.
+      - type: bind
+        source: ${AUTH_JWT_PUBLIC_KEY_HOST_FILE:-./keys/jwt-public.pem}
+        target: /var/lib/consumer/jwt-public.pem
+        read_only: true
+
+  api-b:
+    image: reference-consumer-api:dev
+    build:
+      context: .
+      dockerfile: src/ReferenceConsumer.Api/Dockerfile
+    ports:
+      - "${API_B_HTTP_PORT:-8082}:8080"
+    environment:
+      <<: *consumer-environment
+      Service__Name: api-b
+    volumes: *consumer-volumes
