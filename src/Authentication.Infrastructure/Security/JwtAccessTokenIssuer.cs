@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.Security.Cryptography;
 using Authentication.Application.Features.Login;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
@@ -7,20 +6,18 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Authentication.Infrastructure.Security;
 
-public sealed class JwtAccessTokenIssuer : IAccessTokenIssuer, IDisposable
+public sealed class JwtAccessTokenIssuer : IAccessTokenIssuer
 {
     private readonly JwtOptions _options;
     private readonly TimeProvider _timeProvider;
-    private readonly RSA _rsa;
     private readonly SigningCredentials _signingCredentials;
     private readonly JsonWebTokenHandler _handler = new();
 
-    public JwtAccessTokenIssuer(IOptions<JwtOptions> options, TimeProvider timeProvider)
+    public JwtAccessTokenIssuer(IOptions<JwtOptions> options, TimeProvider timeProvider, RsaSigningKey signingKey)
     {
         _options = options.Value;
         _timeProvider = timeProvider;
-        _rsa = LoadKey(_options.PrivateKeyPath);
-        _signingCredentials = new SigningCredentials(new RsaSecurityKey(_rsa), SecurityAlgorithms.RsaSha256);
+        _signingCredentials = signingKey.SigningCredentials;
     }
 
     public AccessToken Issue(AuthenticatedIdentity identity)
@@ -50,27 +47,5 @@ public sealed class JwtAccessTokenIssuer : IAccessTokenIssuer, IDisposable
         };
 
         return new AccessToken(_handler.CreateToken(descriptor), expiresAt);
-    }
-
-    public void Dispose()
-    {
-        _rsa.Dispose();
-    }
-
-    private static RSA LoadKey(string path)
-    {
-        var rsa = RSA.Create();
-
-        try
-        {
-            rsa.ImportFromPem(File.ReadAllText(path));
-            return rsa;
-        }
-        catch (Exception exception) when (exception is ArgumentException or CryptographicException or IOException
-            or UnauthorizedAccessException)
-        {
-            rsa.Dispose();
-            throw new InvalidOperationException($"The signing key referenced by '{JwtOptions.SectionName}:PrivateKeyPath' could not be loaded as an RSA private key.");
-        }
     }
 }

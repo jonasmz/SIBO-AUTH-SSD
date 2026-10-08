@@ -1,27 +1,3 @@
-<!--
-Sync Impact Report — temporary adoption review material; remove before committing.
-Version change: unratified template → 1.0.0 (initial adoption).
-Modified principles: five unfilled template slots replaced by Principles I–VII.
-Added sections: Technical and Repository Constraints; Development Workflow and Quality Gates;
-completed Governance and adoption metadata.
-Removed sections: none; illustrative comments and placeholders removed.
-Baseline read completely: SRS_Authentication_API_v1.1.md (v1.1),
-TECHNICAL_CONSTRAINTS.md (v1.0), ROADMAP_SPECKIT_AUTH_API_v1.1.md (v1.1).
-Discrepancy: Roadmap §7.2 and SRS §46 call the 15-minute access-token lifetime recommended;
-SRS FR-JWT-009 requires it as the configurable default. The explicit requirement governs.
-No unresolved project decisions or deferred placeholders block constitution adoption.
-Synchronization follow-up (reported only; templates and commands remain unchanged):
-- tasks-template.md and speckit-tasks guidance call tests optional; generated artifacts MUST
-  include tests required by Principle VI and the active roadmap gate.
-- spec-template.md and speckit-specify guidance permit reasonable defaults; generated artifacts
-  MUST NOT promote assumptions into requirements or invent missing baseline decisions.
-- plan-template.md sample layouts, technologies, metrics and Complexity Tracking examples
-  MUST NOT override prescribed projects, stack, scope or baseline amendment governance.
-- Generic plan/task phase labels are workflow subdivisions, not the eight roadmap phases;
-  generated artifacts MUST identify their active roadmap phase and gate explicitly.
-No baseline documents, template sources, feature artifacts or application code modified.
--->
-
 # Authentication API Constitution
 
 ## Core Principles

@@ -28,6 +28,7 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
         SetEnvironmentVariable("Jwt__Audience", "authentication-api-tests");
         SetEnvironmentVariable("Jwt__AccessTokenLifetimeMinutes", accessTokenLifetimeMinutes.ToString(System.Globalization.CultureInfo.InvariantCulture));
         SetEnvironmentVariable("Jwt__PrivateKeyPath", _resources.PrivateKeyPath);
+        SetEnvironmentVariable("Jwt__ClockSkewSeconds", "30");
     }
 
     public Phase1TestResources Resources => _resources;

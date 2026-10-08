@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Authentication.Infrastructure.Identity;
 using Authentication.Infrastructure.Persistence;
 using Authentication.IntegrationTests.Infrastructure;
 using Microsoft.AspNetCore.Identity;
@@ -32,7 +33,7 @@ public sealed class BootstrapAndHealthTests
 
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AuthenticationDbContext>();
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser<string>>>();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
         var role = Assert.Single(await context.Roles.ToListAsync(cancellationToken));
         Assert.Equal(DatabaseInitializer.AdministratorRoleId, role.Id);

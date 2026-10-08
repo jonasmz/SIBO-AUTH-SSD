@@ -4,10 +4,10 @@ using Microsoft.AspNetCore.Identity;
 namespace Authentication.Infrastructure.Identity;
 
 public sealed class IdentityCredentialValidator(
-    UserManager<IdentityUser<string>> userManager,
-    IPasswordHasher<IdentityUser<string>> passwordHasher) : IIdentityCredentialValidator
+    UserManager<ApplicationUser> userManager,
+    IPasswordHasher<ApplicationUser> passwordHasher) : IIdentityCredentialValidator
 {
-    private static readonly IdentityUser<string> DummyUser = new() { Id = "dummy", UserName = "dummy" };
+    private static readonly ApplicationUser DummyUser = new() { Id = "dummy", UserName = "dummy" };
 
     public async Task<AuthenticatedIdentity?> ValidateAsync(
         string email,
@@ -27,6 +27,9 @@ public sealed class IdentityCredentialValidator(
 
         if (userManager.SupportsUserLockout && await userManager.IsLockedOutAsync(user))
         {
+            // Spend one hash verification, as every other refusal does. The result is ignored and
+            // CheckPasswordAsync is not used, so no failure is counted and nothing is rehashed.
+            passwordHasher.VerifyHashedPassword(user, user.PasswordHash ?? DummyHash(), password);
             return null;
         }
 
@@ -37,6 +40,13 @@ public sealed class IdentityCredentialValidator(
                 await userManager.AccessFailedAsync(user);
             }
 
+            return null;
+        }
+
+        if (!user.IsEnabled)
+        {
+            // The password was verified like any other attempt; a disabled account gets the same
+            // generic refusal and its failed-attempt counter is left untouched.
             return null;
         }
 

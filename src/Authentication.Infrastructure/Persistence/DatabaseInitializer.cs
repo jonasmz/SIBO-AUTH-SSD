@@ -1,3 +1,4 @@
+using Authentication.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -56,7 +57,7 @@ public sealed partial class DatabaseInitializer(
         }
 
         var roleManager = services.GetRequiredService<RoleManager<IdentityRole<string>>>();
-        var userManager = services.GetRequiredService<UserManager<IdentityUser<string>>>();
+        var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
 
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
 
@@ -69,11 +70,12 @@ public sealed partial class DatabaseInitializer(
             }));
         }
 
-        var administrator = new IdentityUser<string>
+        var administrator = new ApplicationUser
         {
             Id = AdministratorUserId,
             UserName = AdministratorUserName,
-            Email = AdministratorEmail
+            Email = AdministratorEmail,
+            IsEnabled = true
         };
 
         Ensure(await userManager.CreateAsync(administrator, InitialAdministratorPassword));
