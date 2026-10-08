@@ -121,9 +121,9 @@ public sealed partial class RenewableSessionStore(
     public Task RevokeAllAsync(string userId, DateTimeOffset revokedAtUtc, SessionRevocationReason reason, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 
-    [LoggerMessage(LogLevel.Warning, "Refresh credential replay detected for session family {FamilyId}, user {UserId}, at {OccurredAtUtc}; trace {TraceId}, span {SpanId}.")]
+    [LoggerMessage(LogLevel.Warning, "Refresh credential replay detected for session family {FamilyId}, user {UserId}, at {OccurredAtUtc:O}; trace {TraceId}, span {SpanId}.")]
     private static partial void LogReplay(ILogger logger, string familyId, string userId, DateTimeOffset occurredAtUtc, string? traceId, string? spanId);
 
-    [LoggerMessage(LogLevel.Information, "Renewable session family {FamilyId} for user {UserId} revoked at {OccurredAtUtc}; trace {TraceId}, span {SpanId}.")]
+    [LoggerMessage(LogLevel.Information, "Renewable session family {FamilyId} for user {UserId} revoked at {OccurredAtUtc:O}; trace {TraceId}, span {SpanId}.")]
     private static partial void LogLogout(ILogger logger, string familyId, string userId, DateTimeOffset occurredAtUtc, string? traceId, string? spanId);
 }

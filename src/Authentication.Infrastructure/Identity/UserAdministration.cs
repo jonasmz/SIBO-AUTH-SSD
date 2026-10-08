@@ -201,7 +201,7 @@ public sealed partial class UserAdministration(
         return active.Count;
     }
 
-    [LoggerMessage(LogLevel.Information, "Renewable sessions of user {UserId} revoked ({Count} families, reason {Reason}) at {OccurredAtUtc}; trace {TraceId}, span {SpanId}.")]
+    [LoggerMessage(LogLevel.Information, "Renewable sessions of user {UserId} revoked ({Count} families, reason {Reason}) at {OccurredAtUtc:O}; trace {TraceId}, span {SpanId}.")]
     private static partial void LogSessionsRevoked(ILogger logger, string userId, int count, string reason, DateTimeOffset occurredAtUtc, string? traceId, string? spanId);
 
     private Task<int> CountEnabledAdministratorsAsync(CancellationToken cancellationToken) =>
