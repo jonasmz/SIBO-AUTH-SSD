@@ -56,7 +56,8 @@ forgot-password (anonymous)
   ├─ not ready / DbException ───────────────────► 503
   └─ FindByEmailAsync
        ├─ unknown or disabled ──────────────────► 204   (no token, no email, no log event)
-       └─ enabled ─► GeneratePasswordResetToken ─► log PasswordResetRequested
+       └─ enabled ─► GeneratePasswordResetToken ─┬─ fails (non-DB) ─► log PasswordResetTokenFailed ─► 204
+                                                   └─ log PasswordResetRequested
                      └─ IEmailSender.SendAsync ─┬─ delivered ───────────► 204
                                                 └─ failed (logged) ─────► 204
 

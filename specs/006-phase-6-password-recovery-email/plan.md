@@ -55,7 +55,7 @@ service (NFR-003).
 
 **Scale/Scope**: Two endpoints, one Application slice (two ports, one handler, commands/outcomes),
 two Infrastructure adapters plus two options types, one shared revocation helper, one enum value,
-three log events, Compose/acceptance updates, Gate G6 documentation.
+four log events, Compose/acceptance updates, Gate G6 documentation.
 
 ## Constitution Check
 
@@ -68,7 +68,7 @@ three log events, Compose/acceptance updates, Gate G6 documentation.
 | III. Hexagonal boundaries and feature slices | PASS | PASS | Domain: enum value only. Application `Features/PasswordRecovery`: `IEmailSender`, `IPasswordRecovery`, `ForgotPasswordHandler` (message content), commands/outcomes — no Identity, MailKit or HTTP types. Infrastructure: `Identity/PasswordRecovery`, `Email/SmtpEmailSender`, options, Data Protection registration, `Sessions/SessionFamilyRevocation` helper. API `Features/PasswordRecovery`: endpoints and requests. MailKit is referenced by Infrastructure only. |
 | IV. Deliberate simplicity and dependency control | PASS | PASS | One new package mandated by the baseline (MailKit, pinned 4.18.0, ≥ 2 weeks old, no advisories). Only the Data Protection token provider is registered. A third revocation copy is replaced by one helper instead of added. No queue, retry, template engine, token store, repository or extra container in `compose.yml`. |
 | V. Security by construction | PASS | PASS | Identity generates and validates tokens and hashes passwords; stamp rotation makes tokens single-use. Identical `204`/`401` responses. Credentials only from external configuration, validated and never echoed; no MailKit protocol logging; plaintext-fallback modes excluded. Key ring outside the image with restricted permissions. JWT model untouched. |
-| VI. Tests of implemented behavior | PASS | PASS | [quickstart.md](quickstart.md): 20 consolidated integration scenarios on real Identity/SQLite/Data Protection, one fake only at the email boundary, deterministic expiry and refused-port failure, trigger-injected faults, restart with and without the same key ring, unit tests for options and MIME, Compose lifecycle acceptance including `down -v`, Phase 1–5 regression. |
+| VI. Tests of implemented behavior | PASS | PASS | [quickstart.md](quickstart.md): consolidated integration scenarios on real Identity/SQLite/Data Protection, one fake only at the email boundary, deterministic expiry, refused-port and key-ring-write failures, trigger-injected faults, restart with and without the same key ring, unit tests for options and MIME, Compose lifecycle acceptance including `down -v`, Phase 1–5 regression. |
 | VII. Persistence ownership and deployment integrity | PASS | PASS | Key ring on a host bind mount independent of Compose volumes, configurable and documented, writable only by Auth API and the operator; SQLite unchanged; startup still migrates before readiness; no extra service in production topology. |
 
 No constitution violation requires a complexity exception.
@@ -119,9 +119,12 @@ src/Authentication.Api/Program.cs                                               
 src/Authentication.Api/appsettings.json                                           # empty Smtp/DataProtection placeholders
 Directory.Packages.props                                                          # MailKit 4.18.0
 compose.yml                                                                       # DP bind mount, Smtp__* env
+.env.example                                                                      # example SMTP/key-ring values
 tests/Authentication.IntegrationTests/Infrastructure/AuthenticationApiFactory.cs  # DP path, Smtp settings, fake sender
 tests/Authentication.IntegrationTests/Infrastructure/CapturingEmailSender.cs      # new fake
-tests/Authentication.IntegrationTests/Scenarios/PasswordRecovery*Tests.cs         # new
+tests/Authentication.IntegrationTests/Scenarios/PasswordRecovery*Tests.cs         # new: request, delivery failure, configuration, restart
+tests/Authentication.IntegrationTests/Scenarios/PasswordReset*Tests.cs            # new: reset, concurrency, session revocation
+tests/Authentication.IntegrationTests/Infrastructure/Phase1TestResources.cs       # temporary key directory
 tests/Authentication.UnitTests/Infrastructure/SmtpOptionsTests.cs                 # new
 tests/Authentication.UnitTests/Infrastructure/SmtpEmailSenderMessageTests.cs      # new
 tests/acceptance/compose.mail-sink.yml                                            # new, acceptance only

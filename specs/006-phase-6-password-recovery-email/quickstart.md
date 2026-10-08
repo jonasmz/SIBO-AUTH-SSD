@@ -24,9 +24,12 @@ No real SMTP server is needed for `dotnet test`. Acceptance starts a disposable 
 ```bash
 dotnet build Authentication.slnx
 dotnet test Authentication.slnx --no-build
-dotnet tool run dotnet-ef migrations has-pending-model-changes \
+dotnet ef migrations has-pending-model-changes \
   --project src/Authentication.Infrastructure --startup-project src/Authentication.Api
 ```
+
+(As in Phase 5, the startup project needs `Microsoft.EntityFrameworkCore.Design` only for this
+check: add it temporarily from the local package cache and revert it afterwards.)
 
 Expected: zero warnings, all tests pass, no pending model changes. Consolidated scenarios (NFR-001):
 
@@ -36,10 +39,12 @@ Expected: zero warnings, all tests pass, no pending model changes. Consolidated 
 | 2 | Forgot: same address in different letter case | treated as the enabled account (one message) |
 | 3 | Forgot: non-JSON, malformed, missing/blank/invalid email | `400 The request is invalid.`; no sender call |
 | 4 | Forgot: real `SmtpEmailSender` against a refused local port | `204`; one `EmailDeliveryFailed` warning with exception type, host, port, UTC, trace id; no token, recipient or SMTP password in logs |
-| 5 | Forgot: no session is revoked | all families still refresh |
+| 4b | Forgot: token generation fails for an enabled account (key directory replaced by a file after startup) | `204`; one `PasswordResetTokenFailed` warning; nothing secret logged |
+| 5 | Forgot: no session is revoked; two consecutive requests send two messages | all families still refresh; no throttling |
 | 6 | Reset: valid token (taken from the fake sender's message) + valid password | `204`; old password `401` at login; new password `200`; email, roles, enabled, lockout fields unchanged |
 | 7 | Reset: garbage, one character altered, other account's token, same token reused after success, token issued before a Phase 5 password change | `401 Invalid or expired reset token.`; nothing changed |
-| 8 | Reset: unknown email, disabled account (valid-looking token) | same `401` as scenario 7 |
+| 8 | Reset: unknown email; genuinely valid token after the account is disabled | same `401` as scenario 7; password unchanged |
+| 8b | Reset: email in different letter case; reset token used as `Bearer` or `auth_refresh` | case-insensitive like login; token grants nothing (`401`) |
 | 9 | Reset: expired token (host with negative `TokenLifespan`, no waits) | `401`; nothing changed |
 | 10 | Reset: valid token + policy-violating password | `400` policy detail; token still usable afterwards |
 | 11 | Reset: non-JSON, malformed, missing/blank field | `400 The request is invalid.` |
@@ -50,7 +55,7 @@ Expected: zero warnings, all tests pass, no pending model changes. Consolidated 
 | 16 | Revocation write fails (temporary trigger on `RenewableSessionFamilies`, then dropped) | `503`; old password works; both families still refresh |
 | 17 | Restart: token issued, factory recreated on the same SQLite file and key directory | reset `204` |
 | 18 | Negative control: factory recreated with a different key directory | reset `401` |
-| 19 | Startup with missing/invalid `DataProtection__KeysPath` or any invalid `Smtp__*` | startup fails naming only the setting; no value echoed |
+| 19 | Startup with missing, nonexistent or unusable (a regular file) `DataProtection__KeysPath`, or any invalid `Smtp__*` | startup fails naming only the setting; no value echoed |
 | 20 | Log and response scan over scenarios 1–18 | no token, password, hash, stamp, SMTP password or email body in any log or response |
 
 Unit tests cover `SmtpOptions` validation and MIME message construction (sender, recipient, plain
@@ -82,10 +87,13 @@ Mailpit; establish two sessions; run `docker compose restart auth-api`, then
 `docker compose up -d --force-recreate auth-api`, then `docker compose down -v` and `up` with the
 same host directories; reset with the token (`204`); prove both sessions refresh `401`, the new
 password logs in and the old one does not, and the token is rejected on reuse; prove the key-ring
-directory is a host bind mount, is not a Compose volume, and has mode `0700`; scan `auth-api` logs
+directory is a host bind mount, is not a Compose volume, has mode `0700` and is owned by the
+container UID (set and later removed by running the auth-api image as root, so no host root is
+needed); scan `auth-api` logs
 for the token, both passwords and the SMTP password; tear down; and finally run
 `tests/acceptance/phase-5.sh`, which chains Phases 4–1 as regression. Phase 1–5 scripts export
-disposable `AUTH_SMTP_*` and `AUTH_DATAPROTECTION_HOST_PATH` values. Expected: every script prints
+disposable `AUTH_SMTP_*` values and a world-accessible disposable `AUTH_DATAPROTECTION_HOST_PATH`,
+like their existing data directory. Expected: every script prints
 PASS.
 
 ## 5. Gate G6 checklist

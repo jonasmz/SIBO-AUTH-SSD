@@ -136,6 +136,13 @@ caller (NFR-MAIL-005, NFR-LOG-003). The recipient address is omitted because the
 correlates the failure with the recovery event, which already identifies the user without putting
 an email address in the log.
 
+The same rule covers a token-generation failure that can only happen for an existing, enabled
+account (for example an unwritable key ring): `PasswordRecovery` catches non-database exceptions
+from `GeneratePasswordResetTokenAsync`, logs one `Warning` `PasswordResetTokenFailed` event
+(exception type, UTC, trace/span ids) and returns no ticket, so the caller still gets `204`.
+Database exceptions still yield `503`, which is identical for every address because the lookup
+precedes any account-specific step.
+
 **Alternatives considered**: Answering `503` on delivery failure was rejected by the clarification
 (it would reveal account existence). Logging the exception message was rejected because SMTP server
 replies can echo addresses or credentials.
@@ -146,7 +153,7 @@ replies can echo addresses or credentials.
 
 | Endpoint | Condition | Response |
 |---|---|---|
-| forgot-password | Well-formed request (existing, unknown, disabled, delivery failed) | `204 No Content`, no body |
+| forgot-password | Well-formed request (existing, unknown, disabled, token generation or delivery failed) | `204 No Content`, no body |
 | forgot-password | Not JSON, malformed, missing/blank/invalid `email` | `400 The request is invalid.` |
 | both | Not ready / `DbException` / `DbUpdateException` | `503 The service is not ready.` |
 | reset-password | Not JSON, malformed, missing/blank field, invalid email format | `400 The request is invalid.` |
@@ -215,9 +222,9 @@ was rejected because no frontend exists (spec assumption).
 
 ## 11. Security event logging
 
-**Decision**: Three `LoggerMessage` events, all with UTC time from `TimeProvider` and `Activity`
+**Decision**: Four `LoggerMessage` events, all with UTC time from `TimeProvider` and `Activity`
 trace/span ids: `PasswordResetRequested` (`Information`, user id) after a token is issued;
-`EmailDeliveryFailed` (`Warning`, §6); `PasswordReset` (`Information`, user id, revoked family
+`EmailDeliveryFailed` and `PasswordResetTokenFailed` (`Warning`, §6); `PasswordReset` (`Information`, user id, revoked family
 count). No event for unknown or disabled accounts, and none contains a token, password, hash,
 stamp, email body or SMTP secret.
 
@@ -247,8 +254,10 @@ records attacker-supplied PII without a requirement.
   `sha256:98b916bd3c8d61f7633a52d3ea2f58d00620cb01ca57ab59edde68c347a95365`, published 2026-09-05)
   and reads the message through Mailpit's HTTP API. It proves a token survives
   `docker compose restart`, `up --force-recreate` and `down -v` + `up`; then runs `phase-5.sh`
-  (which chains Phases 4–1). Phase 1–5 scripts export disposable `AUTH_SMTP_*` and
-  `AUTH_DATAPROTECTION_HOST_PATH` values.
+  (which chains Phases 4–1). Because the container runs as a different non-root UID and the host
+  has no root, `phase-6.sh` sets the key-ring owner and mode `0700` (and removes the directory at
+  teardown) by running the auth-api image itself as root; Phase 1–5 scripts export disposable
+  `AUTH_SMTP_*` values and a world-accessible key directory like their existing data directory.
 
 **Rationale**: NFR-001/002, Technical Constraints §22.4 (fake sender in the normal suite; real SMTP
 only where a test server is configured), Constitution VI and VII (destructive teardown only in a
