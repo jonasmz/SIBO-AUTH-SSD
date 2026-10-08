@@ -163,6 +163,7 @@ tests/Authentication.UnitTests/Infrastructure/MutableTimeProvider.cs            
 tests/Authentication.IntegrationTests/Infrastructure/AuthenticationApiFactory.cs    # temp log directory, environment option
 tests/Authentication.IntegrationTests/Scenarios/OperationalEventsTests.cs          # new
 tests/Authentication.IntegrationTests/Scenarios/ApiDocumentationTests.cs           # new
+tests/Authentication.IntegrationTests/Scenarios/OlderBackupRestoreTests.cs         # new: pending migrations on an older database
 docs/phase-8-operations.md                                                  # new: deployment, paths, backup/restore, Gate G8 evidence
 ```
 
