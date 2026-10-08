@@ -89,4 +89,4 @@ Focused tests live in `tests/Authentication.IntegrationTests/Scenarios/`:
 `PasswordChangeTests`, `PasswordChangeConcurrencyTests`, `PasswordChangeSessionRevocationTests`,
 `AdministratorPasswordChangeTests`, and `ConsumerValidationTests`.
 
-Gate G5 approval by the project owner is **pending** (task T024).
+Gate G5 was approved by the project owner on 2026-10-08.

@@ -38,3 +38,23 @@
   family identified by a usable `auth_refresh` cookie of the same user; without one, all families
   are revoked (FR-008, FR-017, US2 scenarios 4–5).
 - Gate G4 is closed in the roadmap; no dependency blocks this phase.
+
+## Gate G5 Closure
+
+Closure recorded on 2026-10-08 after implementation tasks T001-T023 were completed and verified
+and the convergence review found no remaining technical gaps. Evidence:
+`docs/phase-5-operations.md` (Gate G5 verification evidence), `tests/acceptance/phase-5.sh`, and
+the automated suite under `tests/`.
+
+- [x] Complete authenticated password change: token required, current password verified and policy enforced by Identity, rejections change nothing
+- [x] Initial administrator retires the default password without email; the replacement persists across restart and `admin` is not restored
+- [x] Other renewable sessions revoked atomically; the session identified by a usable cookie of the same user is kept, all are revoked without one
+- [x] Access tokens stay stateless: no blacklist, consumers unchanged and still accept earlier unexpired tokens
+- [x] No premature email or recovery infrastructure: no SMTP, `IEmailSender`, forgot/reset endpoint, token, package, migration, or setting
+- [x] Secret-free logs with a UTC password-change event
+- [x] Build PASS (`dotnet build --no-incremental`: 0 warnings, 0 errors)
+- [x] Tests PASS (115/115, 0 skipped)
+- [x] Regression Phase 1-4 PASS (`phase-5.sh` runs `phase-4.sh`, which runs `phase-3.sh`, `phase-2.sh` and `phase-1.sh`)
+- [x] Checklist updated (this section)
+- [x] Gate G5 explicitly approved by the project owner on 2026-10-08
+- [x] Identifiable Phase 5 closing commit created (`[Phase 5] Close Gate G5`)
