@@ -253,4 +253,4 @@ Task: "Add MIME construction unit coverage in tests/Authentication.UnitTests/Inf
 
 ## Phase 9: Convergence
 
-- [ ] T051 [P] Extend `tests/Authentication.IntegrationTests/Scenarios/PasswordRecoveryConfigurationTests.cs` so an empty and a whitespace-only `DataProtection__KeysPath` also terminate startup naming only `DataProtection:KeysPath`, alongside the existing nonexistent-path and regular-file cases, per T013 and quickstart scenario 19 (partial)
+- [X] T051 [P] Extend `tests/Authentication.IntegrationTests/Scenarios/PasswordRecoveryConfigurationTests.cs` so an empty and a whitespace-only `DataProtection__KeysPath` also terminate startup naming only `DataProtection:KeysPath`, alongside the existing nonexistent-path and regular-file cases, per T013 and quickstart scenario 19 (partial)

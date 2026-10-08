@@ -39,6 +39,13 @@ public sealed class PasswordRecoveryConfigurationTests
         Assert.Contains(KeysPathSetting, absentMessage, StringComparison.Ordinal);
         Assert.DoesNotContain("secret-keys-dir", absentMessage, StringComparison.Ordinal);
 
+        // An unset (empty) or whitespace-only setting is missing just the same.
+        foreach (var blank in new[] { string.Empty, "   " })
+        {
+            using var unset = new AuthenticationApiFactory(dataProtectionKeysPath: blank);
+            Assert.Contains(KeysPathSetting, StartupFailureMessage(unset), StringComparison.Ordinal);
+        }
+
         // A regular file where a directory is expected cannot hold keys either.
         var file = Path.Combine(Path.GetTempPath(), $"keys-file-{Guid.NewGuid():N}");
         File.WriteAllText(file, string.Empty);
