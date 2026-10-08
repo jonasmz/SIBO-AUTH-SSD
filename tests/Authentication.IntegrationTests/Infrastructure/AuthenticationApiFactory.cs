@@ -1,4 +1,5 @@
 using Authentication.Application.Features.PasswordRecovery;
+using Authentication.Infrastructure.Identity;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -81,6 +82,9 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
         }
     }
 
+    /// <summary>Counts password verifications performed by the host.</summary>
+    public CountingPasswordHasher PasswordHasher { get; } = new();
+
     /// <summary>Messages the host asked to deliver; empty when the real sender is used.</summary>
     public CapturingEmailSender Emails { get; } = new();
 
@@ -115,6 +119,8 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
             }
 
             services.AddSingleton<IStartupFilter, TestConnectionAddressStartupFilter>();
+            services.RemoveAll<IPasswordHasher<ApplicationUser>>();
+            services.AddSingleton<IPasswordHasher<ApplicationUser>>(PasswordHasher);
 
             if (!_useRealEmailSender)
             {
