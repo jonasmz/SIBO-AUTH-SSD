@@ -5,6 +5,13 @@
 **Status**: Draft  
 **Input**: Phase 7 — Authentication API Security Hardening
 
+## Clarifications
+
+### Session 2026-10-08
+
+- Q: Should the service ship documented default values for the request limits, or make them required settings with no default? → A: Documented defaults for the four endpoint policies and the per-address recovery limit, fixed during planning as an explicit, conservative project decision and overridable by external configuration.
+- Q: How much of the reverse proxy's first limiting layer does this phase deliver? → A: Besides defining the application-side trust contract, the phase delivers a documented reference proxy configuration (first-layer limits and forwarded headers) and verifies it once in a disposable proxy container used only by acceptance; no service is added to the deployment and the full Phase 8 deployment is not anticipated.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Protection Against Brute Force and Request Abuse (Priority: P1)
@@ -192,16 +199,18 @@ every flow.
 - **FR-018**: The phase MUST NOT introduce new product endpoints, new refresh-session semantics,
   JWT revocation, external or database-backed limit storage, additional permanent services, a new
   logging framework, or work belonging to Phase 8, and MUST preserve Phase 1–6 behavior.
-- **FR-019**: [NEEDS CLARIFICATION: what are the default request-limit values for the four endpoint
-  policies and the per-address recovery limit? The baseline requires the limits to exist, to be
-  configurable and to answer `429`, but gives no numbers. Should the service ship documented default
-  values, or should the limits be required settings with no default (like the SMTP settings), failing
-  startup when missing?]
-- **FR-020**: [NEEDS CLARIFICATION: how much of the proxy's first limiting layer does this phase
-  deliver? The baseline requires the proxy to be able to apply a first layer (SRS NFR-SEC-BF-012) and
-  Phase 8 delivers the complete proxy deployment. Does Phase 7 produce and verify an actual proxy
-  configuration (limits, forwarded-header settings) in a disposable test, or only define the contract
-  the application relies on and document it?]
+- **FR-019**: The four endpoint policies and the per-address recovery limit MUST each ship with a
+  documented default value so that no new setting is required to start the service; those values
+  are an explicit project decision recorded during planning (the baseline gives none), chosen
+  conservatively, and every one MUST be overridable through external configuration without
+  rebuilding.
+- **FR-020**: Besides the application-side trust contract, the phase MUST deliver a documented
+  reference configuration for the designated reverse proxy that applies a first layer of request
+  limiting and sets or overwrites the forwarded headers, and MUST verify it once through a
+  disposable proxy used only by the acceptance procedure, showing that the real client origin
+  reaches the application and a client-supplied forwarded header does not. The configuration MUST NOT
+  add a service to the deployment topology and MUST NOT include the frontend or the complete
+  production deployment, which belong to Phase 8.
 
 ### Applicable Non-Functional Requirements
 
@@ -295,8 +304,12 @@ here.
 - A browser request to refresh or logout with no origin keeps being refused, as decided in Phase 4;
   non-browser clients are outside the architecture (the only caller is the same-origin frontend), so
   no further origin policy is assumed.
+- The reference proxy configuration is an operator artifact for the first limiting layer; its
+  complete production form (frontend routing, TLS, Angular files) is delivered by Phase 8.
 - Request limits are held in memory by the single running instance; a restart resets them and no
   external storage is used (SRS NFR-SEC-BF-010).
+- The default limit values are a project decision made during planning, not a normative figure, and
+  are documented with the operator guidance so they can be reviewed and tuned.
 - A `429` carries no account information; including a retry hint is allowed but not required.
 - Request and response schemas, header names, and exact configuration key names are contract details
   settled in planning, provided they satisfy the behavior above.

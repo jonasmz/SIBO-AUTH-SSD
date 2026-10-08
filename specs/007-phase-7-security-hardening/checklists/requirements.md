@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -33,8 +33,9 @@
 
 - Validation pass 1: all items pass except the intentional open markers. No library, class, or
   algorithm is prescribed; the endpoint paths named are the existing public contracts.
-- Two genuine ambiguities remain (FR-019 request-limit defaults; FR-020 scope of the proxy's first
-  limiting layer). Resolve them with `/speckit-clarify` before planning.
+- Clarification session 2026-10-08 resolved both genuine ambiguities: documented, overridable
+  defaults for the request limits fixed during planning (FR-019), and a documented reference proxy
+  configuration verified once in a disposable acceptance proxy (FR-020).
 - Gate G6 is closed in the roadmap; no dependency blocks this phase. The Phase 4 and Phase 6 notes
   that deferred refresh and recovery limiting are resolved by this phase.
 - Most enumeration, cookie, and origin behavior already exists from Phases 1–6; the spec marks it
