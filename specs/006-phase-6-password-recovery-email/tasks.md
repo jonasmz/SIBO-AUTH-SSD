@@ -248,3 +248,9 @@ Task: "Add MIME construction unit coverage in tests/Authentication.UnitTests/Inf
 - [X] T048 [P] Extend `tests/Authentication.IntegrationTests/Scenarios/PasswordResetTests.cs` so a valid reset token presented as `Authorization: Bearer` to `/api/admin/users` and to API A, and as the `auth_refresh` cookie to `POST /api/auth/refresh`, is rejected with `401`, grants nothing, and remains redeemable afterwards, per spec edge case (single-purpose reset token), T024 and quickstart scenario 8b (partial)
 - [X] T049 [P] In `tests/acceptance/phase-6.sh`, assert that the key-ring directory is owned by the container UID (`stat -c %u` equals `APP_UID_VALUE`) next to the existing mode `0700` check, per FR-016 and T036 (partial)
 - [X] T050 [P] Update the logging section of `docs/phase-6-operations.md` to list the `Warning` events `EmailDeliveryFailed` (exception type, SMTP status, host, port, UTC, trace/span ids) and `PasswordResetTokenFailed` (exception type, UTC, trace/span ids) alongside `PasswordResetRequested` and `PasswordReset`, then re-run the suite and refresh the recorded Gate G6 evidence, per FR-017 and T034 (partial)
+
+---
+
+## Phase 9: Convergence
+
+- [ ] T051 [P] Extend `tests/Authentication.IntegrationTests/Scenarios/PasswordRecoveryConfigurationTests.cs` so an empty and a whitespace-only `DataProtection__KeysPath` also terminate startup naming only `DataProtection:KeysPath`, alongside the existing nonexistent-path and regular-file cases, per T013 and quickstart scenario 19 (partial)
