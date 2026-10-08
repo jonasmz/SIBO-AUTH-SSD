@@ -36,5 +36,5 @@
   transaction technique is prescribed.
 - The baseline has one explicit phase-timing conflict: SRS NFR-SEC-BF-006 through NFR-SEC-BF-009
   name refresh rate limiting, whereas the roadmap places general application rate limiting in
-  Phase 7. The spec records this without silently expanding Phase 4; origin/CSRF requirements are
-  still included now.
+  Phase 7. Clarification confirms deferral to Phase 7 without a baseline amendment; origin/CSRF
+  requirements are still included now.

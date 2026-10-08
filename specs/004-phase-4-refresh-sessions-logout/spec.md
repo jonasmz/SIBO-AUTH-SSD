@@ -5,6 +5,12 @@
 **Status**: Draft  
 **Input**: Phase 4 — Refresh Tokens, Renewable Sessions and Logout
 
+## Clarifications
+
+### Session 2026-10-08
+
+- Q: Should Phase 4 implement refresh-request rate limiting despite the roadmap assigning general rate limiting to Phase 7? → A: Defer refresh-request rate limiting to Phase 7; no baseline amendment.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Renewable Login Session (Priority: P1)
@@ -304,9 +310,9 @@ This feature MUST NOT introduce:
 **Phase-boundary note**: SRS NFR-SEC-BF-006 through NFR-SEC-BF-009 name refresh among sensitive
 endpoints subject to differentiated application rate limiting, but the roadmap assigns general
 application rate limiting to Phase 7 and expressly excludes it from Phase 4. This is a timing
-conflict in the baseline, not a Phase 4 authorization to implement rate limiting early. Phase 4
-implements the applicable cookie origin/CSRF requirements above; rate-limiting delivery requires
-an explicit baseline sequencing decision before it is planned.
+conflict in the baseline, not a Phase 4 authorization to implement rate limiting early. Per the
+Phase 4 clarification, refresh-request rate limiting is deferred to Phase 7 without a baseline
+amendment. Phase 4 implements the applicable cookie origin/CSRF requirements above.
 
 ## Success Criteria *(mandatory)*
 
