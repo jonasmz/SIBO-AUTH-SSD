@@ -14,6 +14,8 @@ public sealed class Phase1TestResources : IDisposable
 
         DatabasePath = Path.Combine(RootPath, "auth.db");
         PrivateKeyPath = Path.Combine(RootPath, "jwt-private.pem");
+        DataProtectionKeysPath = Path.Combine(RootPath, "dataprotection");
+        Directory.CreateDirectory(DataProtectionKeysPath);
 
         using var rsa = RSA.Create(3072);
         File.WriteAllText(PrivateKeyPath, rsa.ExportRSAPrivateKeyPem());
@@ -27,6 +29,9 @@ public sealed class Phase1TestResources : IDisposable
     public string PrivateKeyPath { get; }
 
     public string PublicKeyPem { get; }
+
+    /// <summary>Temporary Data Protection key-ring directory; tokens survive a host recreated on the same one.</summary>
+    public string DataProtectionKeysPath { get; }
 
     public string ConnectionString => $"Data Source={DatabasePath}";
 

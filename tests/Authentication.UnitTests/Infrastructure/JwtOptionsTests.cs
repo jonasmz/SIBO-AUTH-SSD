@@ -81,7 +81,14 @@ public sealed class JwtOptionsTests
             ["Jwt:PrivateKeyPath"] = privateKeyPath,
             ["Jwt:ClockSkewSeconds"] = clockSkewSeconds,
             ["RefreshSession:LifetimeDays"] = lifetimeDays,
-            ["Security:FrontendOrigin"] = frontendOrigin
+            ["Security:FrontendOrigin"] = frontendOrigin,
+            // Phase 6 settings are required too; valid dummies keep these tests about the settings they name.
+            ["Smtp:Host"] = "smtp.test.invalid",
+            ["Smtp:Port"] = "2525",
+            ["Smtp:Security"] = "None",
+            ["Smtp:SenderAddress"] = "no-reply@auth.test",
+            ["Smtp:SenderName"] = "Authentication API Tests",
+            ["DataProtection:KeysPath"] = Path.GetTempPath()
         };
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
 

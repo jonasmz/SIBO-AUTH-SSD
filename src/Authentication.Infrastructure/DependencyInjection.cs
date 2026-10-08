@@ -3,11 +3,13 @@ using Authentication.Application.Features.Passwords;
 using Authentication.Application.Features.Roles;
 using Authentication.Application.Features.Sessions;
 using Authentication.Application.Features.Users;
+using Authentication.Infrastructure.Email;
 using Authentication.Infrastructure.Health;
 using Authentication.Infrastructure.Identity;
 using Authentication.Infrastructure.Persistence;
 using Authentication.Infrastructure.Security;
 using Authentication.Infrastructure.Sessions;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -44,11 +46,20 @@ public static class DependencyInjection
             FrontendOrigin = configuration["Security:FrontendOrigin"] ?? string.Empty
         };
 
+        var smtpOptions = SmtpOptions.FromConfiguration(configuration);
+        var dataProtectionOptions = new DataProtectionStorageOptions
+        {
+            KeysPath = configuration[$"{DataProtectionStorageOptions.SectionName}:KeysPath"] ?? string.Empty
+        };
+
         Validate(jwtOptions, sqliteOptions, refreshOptions);
+        ValidateRecoveryInfrastructure(smtpOptions, dataProtectionOptions);
 
         services.AddSingleton(Options.Create(jwtOptions));
         services.AddSingleton(Options.Create(sqliteOptions));
         services.AddSingleton(Options.Create(refreshOptions));
+        services.AddSingleton(Options.Create(smtpOptions));
+        services.AddSingleton(Options.Create(dataProtectionOptions));
         services.AddSingleton<RefreshCredentialProtector>();
         services.AddScoped<IRenewableSessionStore, RenewableSessionStore>();
         services.AddScoped<IRefreshSessionRotation, RenewableSessionStore>();
@@ -84,7 +95,16 @@ public static class DependencyInjection
                 options.Password.RequiredUniqueChars = 1;
             })
             .AddRoles<IdentityRole<string>>()
-            .AddEntityFrameworkStores<AuthenticationDbContext>();
+            .AddEntityFrameworkStores<AuthenticationDbContext>()
+            // Only the Data Protection provider issues reset tokens; the email, phone and
+            // authenticator providers of AddDefaultTokenProviders are not needed.
+            .AddTokenProvider<DataProtectorTokenProvider<ApplicationUser>>(TokenOptions.DefaultProvider);
+
+        // The key ring lives in operator-controlled storage that outlives the container and the
+        // Compose project, so outstanding reset tokens survive restart, recreation and `down -v`.
+        services.AddDataProtection()
+            .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionOptions.KeysPath))
+            .SetApplicationName("Authentication.Api");
 
         // Identity options (including the password policy) stay externally configurable.
         services.Configure<IdentityOptions>(configuration.GetSection("Identity"));
@@ -141,6 +161,15 @@ public static class DependencyInjection
             throw new InvalidOperationException(
                 $"Required configuration '{keySetting}' does not reference a readable private key file.");
         }
+    }
+
+    private static void ValidateRecoveryInfrastructure(SmtpOptions smtpOptions, DataProtectionStorageOptions dataProtectionOptions)
+    {
+        var invalidSmtpSetting = smtpOptions.FirstInvalidSetting();
+        Require(invalidSmtpSetting is null, invalidSmtpSetting ?? SmtpOptions.SectionName);
+        Require(
+            DataProtectionStorageOptions.IsUsableDirectory(dataProtectionOptions.KeysPath),
+            $"{DataProtectionStorageOptions.SectionName}:KeysPath");
     }
 
     private static void Require(bool isValid, string setting)

@@ -1,4 +1,6 @@
+using Authentication.Application.Features.PasswordRecovery;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +18,8 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
 
     private readonly TimeProvider? _timeProvider;
     private readonly CapturingLoggerProvider _logs = new();
+    private readonly TimeSpan? _resetTokenLifespan;
+    private readonly bool _useRealEmailSender;
 
     public AuthenticationApiFactory(
         string? connectionStringOverride = null,
@@ -24,8 +28,13 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
         Phase1TestResources? sharedResources = null,
         int refreshSessionLifetimeDays = 7,
         string? frontendOrigin = FrontendOrigin,
-        IReadOnlyDictionary<string, string>? additionalSettings = null)
+        IReadOnlyDictionary<string, string>? additionalSettings = null,
+        string? dataProtectionKeysPath = null,
+        TimeSpan? resetTokenLifespan = null,
+        bool useRealEmailSender = false)
     {
+        _resetTokenLifespan = resetTokenLifespan;
+        _useRealEmailSender = useRealEmailSender;
         _ownsResources = sharedResources is null;
         _resources = sharedResources ?? new Phase1TestResources();
         _timeProvider = timeProvider;
@@ -37,6 +46,14 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
         SetEnvironmentVariable("Jwt__ClockSkewSeconds", "30");
         SetEnvironmentVariable("RefreshSession__LifetimeDays", refreshSessionLifetimeDays.ToString(System.Globalization.CultureInfo.InvariantCulture));
         SetEnvironmentVariable("Security__FrontendOrigin", frontendOrigin ?? string.Empty);
+        SetEnvironmentVariable("DataProtection__KeysPath", dataProtectionKeysPath ?? _resources.DataProtectionKeysPath);
+
+        // Valid dummy SMTP settings; the default capturing sender never connects to them.
+        SetEnvironmentVariable("Smtp__Host", "smtp.test.invalid");
+        SetEnvironmentVariable("Smtp__Port", "2525");
+        SetEnvironmentVariable("Smtp__Security", "None");
+        SetEnvironmentVariable("Smtp__SenderAddress", "no-reply@auth.test");
+        SetEnvironmentVariable("Smtp__SenderName", "Authentication API Tests");
 
         // Extra external settings such as a stricter Identity password policy
         // (for example "Identity__Password__RequiredLength").
@@ -45,6 +62,9 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
             SetEnvironmentVariable(key, value);
         }
     }
+
+    /// <summary>Messages the host asked to deliver; empty when the real sender is used.</summary>
+    public CapturingEmailSender Emails { get; } = new();
 
     /// <summary>Formatted log messages emitted by the host, for secret-scanning assertions.</summary>
     public IReadOnlyList<string> CapturedLogs => _logs.Snapshot();
@@ -68,14 +88,25 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
         builder.UseEnvironment("Testing");
         builder.ConfigureLogging(logging => logging.AddProvider(_logs));
 
-        if (_timeProvider is not null)
+        builder.ConfigureTestServices(services =>
         {
-            builder.ConfigureTestServices(services =>
+            if (_timeProvider is not null)
             {
                 services.RemoveAll<TimeProvider>();
                 services.AddSingleton(_timeProvider);
-            });
-        }
+            }
+
+            if (!_useRealEmailSender)
+            {
+                services.RemoveAll<IEmailSender>();
+                services.AddSingleton<IEmailSender>(Emails);
+            }
+
+            if (_resetTokenLifespan is { } lifespan)
+            {
+                services.Configure<DataProtectionTokenProviderOptions>(options => options.TokenLifespan = lifespan);
+            }
+        });
     }
 
     protected override void Dispose(bool disposing)

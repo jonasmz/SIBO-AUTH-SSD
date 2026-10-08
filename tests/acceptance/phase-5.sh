@@ -25,6 +25,14 @@ export AUTH_JWT_ISSUER="https://auth-api.acceptance"
 export AUTH_JWT_AUDIENCE="authentication-clients"
 export AUTH_JWT_CLOCK_SKEW_SECONDS="30"
 export AUTH_FRONTEND_ORIGIN="https://frontend.acceptance"
+# Phase 6 settings (required by compose.yml): a disposable key-ring directory and a dummy SMTP sender
+# that these scripts never use.
+export AUTH_DATAPROTECTION_HOST_PATH="$STATE/dataprotection"
+export AUTH_SMTP_HOST="${AUTH_SMTP_HOST:-smtp.acceptance.invalid}"
+export AUTH_SMTP_PORT="${AUTH_SMTP_PORT:-2525}"
+export AUTH_SMTP_SECURITY="${AUTH_SMTP_SECURITY:-None}"
+export AUTH_SMTP_SENDER_ADDRESS="${AUTH_SMTP_SENDER_ADDRESS:-no-reply@acceptance.invalid}"
+export AUTH_SMTP_SENDER_NAME="${AUTH_SMTP_SENDER_NAME:-Authentication API Acceptance}"
 export AUTH_HTTP_PORT="$AUTH_PORT"
 export API_A_HTTP_PORT="$A_PORT"
 export API_B_HTTP_PORT="$B_PORT"
@@ -107,6 +115,7 @@ change_password() {
 # --- Disposable external storage ---------------------------------------------------------
 install -d -m 0755 "$STATE/keys"
 install -d -m 0777 "$STATE/data"
+install -d -m 0777 "$STATE/dataprotection"
 openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out "$STATE/keys/jwt-private.pem" 2>/dev/null
 openssl pkey -in "$STATE/keys/jwt-private.pem" -pubout -out "$STATE/keys/jwt-public.pem"
 chmod 0644 "$STATE/keys/jwt-private.pem" "$STATE/keys/jwt-public.pem"
@@ -195,7 +204,8 @@ docker compose down -v >/dev/null
 (
   unset AUTH_JWT_PUBLIC_KEY_HOST_FILE AUTH_JWT_CLOCK_SKEW_SECONDS API_A_HTTP_PORT API_B_HTTP_PORT \
         COMPOSE_PROJECT_NAME AUTH_HTTP_PORT AUTH_SQLITE_HOST_PATH AUTH_RSA_HOST_PATH \
-        AUTH_JWT_ISSUER AUTH_JWT_AUDIENCE AUTH_FRONTEND_ORIGIN
+        AUTH_JWT_ISSUER AUTH_JWT_AUDIENCE AUTH_FRONTEND_ORIGIN AUTH_DATAPROTECTION_HOST_PATH \
+        AUTH_SMTP_HOST AUTH_SMTP_PORT AUTH_SMTP_SECURITY AUTH_SMTP_SENDER_ADDRESS AUTH_SMTP_SENDER_NAME
   "$REPO_ROOT/tests/acceptance/phase-4.sh"
 ) || fail "Phase 4 regression failed"
 pass "Phase 4 acceptance regression (includes Phases 3, 2 and 1)"
