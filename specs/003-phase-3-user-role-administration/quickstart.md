@@ -55,16 +55,18 @@ tests/acceptance/phase-3.sh
 The script uses disposable host directories and a dedicated Compose project, then:
 
 1. Starts `auth-api`, `api-a`, and `api-b` and logs in as `admin@local.invalid` / `admin`.
-2. Calls `GET /api/admin/users` without a token (`401`) and with the admin token (`200`).
-3. Creates role `Operator`, then user `operator@example.test` with that role. Logs in as that user,
-   gets `403` on `/api/admin/users`, and gets `200` from `api-a` `/api/caller` with role `Operator`.
-4. Disables the user. Login returns `401` with a body identical to a wrong-password login. Enables
+2. Calls `GET /api/admin/users` without a token (`401`) and with the admin token (`200`), then
+   creates user `operator@example.test` and reads it back.
+3. Disables the user. Login returns `401` with a body identical to a wrong-password login. Enables
    the user, and login returns `200` again.
+4. Creates role `Operator` and sets it on the user. The user's new token gets `403` on
+   `/api/admin/users` and `200` from `api-a` `/api/caller` with role `Operator`.
 5. Shows that deleting `Operator` while assigned returns `409`. Sets the user's roles to `[]`,
    then deletes `Operator` (`204`).
-6. Shows that disabling the sole enabled administrator returns `409`.
-7. Restarts `auth-api` and shows that the user, its email, and its enabled state persisted and
-   that the administrator was not re-created.
+6. Shows that disabling the sole enabled administrator, or removing its role, returns `409` and
+   leaves it unchanged.
+7. Disables the user, restarts `auth-api`, and shows that the user, its email, and its disabled
+   state persisted and that the administrator was not re-created.
 8. Scans `docker compose logs auth-api` for the passwords used, every issued access token, and
    `PRIVATE KEY`. None may appear (NFR-002).
 9. Runs `docker compose down -v`, then runs `tests/acceptance/phase-2.sh` with its own variables
