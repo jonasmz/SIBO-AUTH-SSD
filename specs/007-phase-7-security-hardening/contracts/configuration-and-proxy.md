@@ -23,11 +23,11 @@ project decision ([research.md §2](../research.md)).
 |---|---|---|
 | `AUTH_LOCKOUT_MAX_FAILED_ATTEMPTS` | `Identity__Lockout__MaxFailedAccessAttempts` | `5` |
 | `AUTH_LOCKOUT_DURATION` (`hh:mm:ss`) | `Identity__Lockout__DefaultLockoutTimeSpan` | `00:15:00` |
-| `AUTH_RATE_LIMIT_LOGIN_PERMITS` / `_WINDOW_SECONDS` | `RateLimiting__Login__PermitLimit` / `__WindowSeconds` | blank → default |
-| `AUTH_RATE_LIMIT_REFRESH_PERMITS` / `_WINDOW_SECONDS` | `RateLimiting__Refresh__*` | blank → default |
-| `AUTH_RATE_LIMIT_FORGOT_PERMITS` / `_WINDOW_SECONDS` | `RateLimiting__ForgotPassword__*` | blank → default |
-| `AUTH_RATE_LIMIT_RESET_PERMITS` / `_WINDOW_SECONDS` | `RateLimiting__ResetPassword__*` | blank → default |
-| `AUTH_RATE_LIMIT_FORGOT_ADDRESS_PERMITS` / `_WINDOW_SECONDS` | `RateLimiting__ForgotPasswordAddress__*` | blank → default |
+| `AUTH_RATE_LIMIT_LOGIN_PERMIT_LIMIT` / `AUTH_RATE_LIMIT_LOGIN_WINDOW_SECONDS` | `RateLimiting__Login__PermitLimit` / `__WindowSeconds` | blank → default |
+| `AUTH_RATE_LIMIT_REFRESH_PERMIT_LIMIT` / `AUTH_RATE_LIMIT_REFRESH_WINDOW_SECONDS` | `RateLimiting__Refresh__*` | blank → default |
+| `AUTH_RATE_LIMIT_FORGOT_PASSWORD_PERMIT_LIMIT` / `AUTH_RATE_LIMIT_FORGOT_PASSWORD_WINDOW_SECONDS` | `RateLimiting__ForgotPassword__*` | blank → default |
+| `AUTH_RATE_LIMIT_RESET_PASSWORD_PERMIT_LIMIT` / `AUTH_RATE_LIMIT_RESET_PASSWORD_WINDOW_SECONDS` | `RateLimiting__ResetPassword__*` | blank → default |
+| `AUTH_RATE_LIMIT_FORGOT_PASSWORD_ADDRESS_PERMIT_LIMIT` / `AUTH_RATE_LIMIT_FORGOT_PASSWORD_ADDRESS_WINDOW_SECONDS` | `RateLimiting__ForgotPasswordAddress__*` | blank → default |
 | `AUTH_TRUSTED_PROXIES` | `ReverseProxy__TrustedProxies` | blank → none |
 | `AUTH_TRUSTED_NETWORKS` | `ReverseProxy__TrustedNetworks` | blank → none |
 

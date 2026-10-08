@@ -2,9 +2,11 @@ using System.Net;
 using System.Text;
 using Authentication.IntegrationTests.Infrastructure;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
 
@@ -76,6 +78,37 @@ public sealed class ForwardedHeadersTests
         Assert.Equal(HttpStatusCode.Unauthorized, (await LoginAsync(networkClient, "192.0.2.77", "198.51.100.2", cancellationToken)).StatusCode);
     }
 
+    [Fact]
+    public async Task TheSchemeIsTakenOnlyFromAnAuthorizedProxyAndTheHostNever()
+    {
+        // Each factory configures its host through process environment variables, so the unconfigured host is
+        // built (and its settings restored) before the trusting factory sets ReverseProxy__TrustedProxies.
+        IOptions<ForwardedHeadersOptions> unconfigured;
+        using (var untrusting = Factory(new Dictionary<string, string>()))
+        {
+            unconfigured = Options.Create(untrusting.Services.GetRequiredService<IOptions<ForwardedHeadersOptions>>().Value);
+        }
+
+        using var trusting = Factory(new Dictionary<string, string> { ["ReverseProxy__TrustedProxies"] = Peer });
+        var trusted = trusting.Services.GetRequiredService<IOptions<ForwardedHeadersOptions>>();
+        Assert.Equal(ForwardedHeaders.None, unconfigured.Value.ForwardedHeaders);
+
+        // The authorized proxy supplies the original scheme; its forwarded host is ignored.
+        var fromProxy = await ForwardAsync(trusted, Peer);
+        Assert.Equal("https", fromProxy.Request.Scheme);
+        Assert.Equal("auth-api:8080", fromProxy.Request.Host.Value);
+        Assert.Equal(IPAddress.Parse("198.51.100.1"), fromProxy.Connection.RemoteIpAddress);
+
+        // Any other sender, and every sender when nothing is authorized, changes neither scheme nor host.
+        foreach (var (options, peer) in new[] { (trusted, "192.0.2.99"), (unconfigured, Peer) })
+        {
+            var direct = await ForwardAsync(options, peer);
+            Assert.Equal("http", direct.Request.Scheme);
+            Assert.Equal("auth-api:8080", direct.Request.Host.Value);
+            Assert.Equal(IPAddress.Parse(peer), direct.Connection.RemoteIpAddress);
+        }
+    }
+
     [Theory]
     [InlineData("ReverseProxy__TrustedProxies", "not-an-address", "ReverseProxy:TrustedProxies")]
     [InlineData("ReverseProxy__TrustedNetworks", "10.0.0.0/99", "ReverseProxy:TrustedNetworks")]
@@ -95,6 +128,23 @@ public sealed class ForwardedHeadersTests
         settings["RateLimiting__Login__PermitLimit"] = "2";
 
         return new AuthenticationApiFactory(additionalSettings: settings);
+    }
+
+    /// <summary>Runs the framework middleware with the host's resolved options over one forged request.</summary>
+    private static async Task<DefaultHttpContext> ForwardAsync(IOptions<ForwardedHeadersOptions> options, string peer)
+    {
+        var context = new DefaultHttpContext();
+        context.Connection.RemoteIpAddress = IPAddress.Parse(peer);
+        context.Request.Scheme = "http";
+        context.Request.Host = new HostString("auth-api:8080");
+        context.Request.Headers["X-Forwarded-For"] = "198.51.100.1";
+        context.Request.Headers["X-Forwarded-Proto"] = "https";
+        context.Request.Headers["X-Forwarded-Host"] = "attacker.example";
+
+        var middleware = new ForwardedHeadersMiddleware(_ => Task.CompletedTask, NullLoggerFactory.Instance, options);
+        await middleware.Invoke(context);
+
+        return context;
     }
 
     private static IEnumerable<Exception> Chain(Exception exception)

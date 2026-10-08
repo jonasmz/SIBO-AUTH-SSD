@@ -14,6 +14,41 @@ public sealed class RateLimitingTests
 {
     private const string AdminAddress = "198.51.100.1";
 
+    // The documented default windows; the tests only lower permit limits, so these stay in force.
+    private const int LoginWindowSeconds = 60;
+    private const int RefreshWindowSeconds = 60;
+    private const int ForgotPasswordWindowSeconds = 900;
+    private const int ResetPasswordWindowSeconds = 900;
+    private const int ForgotPasswordAddressWindowSeconds = 3600;
+
+    [Fact]
+    public async Task AnIPv4AddressAndItsIPv4MappedIPv6FormShareOneAllowance()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var factory = new AuthenticationApiFactory(additionalSettings: new Dictionary<string, string>
+        {
+            ["RateLimiting__Login__PermitLimit"] = "2"
+        });
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+
+        // One client reaching the service over IPv4 and over a dual-stack socket is one origin.
+        Assert.Equal(HttpStatusCode.Unauthorized, (await LoginAsync(client, "192.0.2.90", cancellationToken)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await LoginAsync(client, "::ffff:192.0.2.90", cancellationToken)).StatusCode);
+        using var limited = await LoginAsync(client, "::ffff:192.0.2.90", cancellationToken);
+        Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
+        AssertRetryAfterWithin(limited, LoginWindowSeconds);
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await LoginAsync(client, "192.0.2.90", cancellationToken)).StatusCode);
+
+        // The event records the folded IPv4 form.
+        Assert.All(
+            factory.CapturedLogs.Where(log => log.StartsWith("RateLimitApplied", StringComparison.Ordinal)),
+            log =>
+            {
+                Assert.Contains("client 192.0.2.90 ", log, StringComparison.Ordinal);
+                Assert.DoesNotContain("::ffff:", log, StringComparison.Ordinal);
+            });
+    }
+
     [Fact]
     public async Task EachOfTheFourPoliciesLimitsItselfIndependentlyPerAddress()
     {
@@ -39,7 +74,7 @@ public sealed class RateLimitingTests
         {
             Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
             Assert.Equal("application/problem+json", limited.Content.Headers.ContentType?.MediaType);
-            Assert.True(limited.Headers.Contains("Retry-After"));
+            AssertRetryAfterWithin(limited, LoginWindowSeconds);
             var body = await limited.Content.ReadAsStringAsync(cancellationToken);
             Assert.DoesNotContain("nobody@example.test", body, StringComparison.Ordinal);
         }
@@ -52,11 +87,25 @@ public sealed class RateLimitingTests
 
         // Each remaining policy exhausts on its own.
         Assert.Equal(HttpStatusCode.Unauthorized, (await RefreshAsync(client, address, cancellationToken)).StatusCode);
-        Assert.Equal(HttpStatusCode.TooManyRequests, (await RefreshAsync(client, address, cancellationToken)).StatusCode);
+        using (var limited = await RefreshAsync(client, address, cancellationToken))
+        {
+            Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
+            AssertRetryAfterWithin(limited, RefreshWindowSeconds);
+        }
+
         Assert.Equal(HttpStatusCode.NoContent, (await ForgotAsync(client, address, "b@example.test", cancellationToken)).StatusCode);
-        Assert.Equal(HttpStatusCode.TooManyRequests, (await ForgotAsync(client, address, "c@example.test", cancellationToken)).StatusCode);
+        using (var limited = await ForgotAsync(client, address, "c@example.test", cancellationToken))
+        {
+            Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
+            AssertRetryAfterWithin(limited, ForgotPasswordWindowSeconds);
+        }
+
         Assert.Equal(HttpStatusCode.Unauthorized, (await ResetAsync(client, address, cancellationToken)).StatusCode);
-        Assert.Equal(HttpStatusCode.TooManyRequests, (await ResetAsync(client, address, cancellationToken)).StatusCode);
+        using (var limited = await ResetAsync(client, address, cancellationToken))
+        {
+            Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
+            AssertRetryAfterWithin(limited, ResetPasswordWindowSeconds);
+        }
 
         // Logout is not one of the limited endpoints.
         for (var i = 0; i < 5; i++)
@@ -96,6 +145,7 @@ public sealed class RateLimitingTests
         using var limited = await ForgotAsync(client, "203.0.113.12", "MEMBER@example.test", cancellationToken);
         Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
         Assert.Equal("application/problem+json", limited.Content.Headers.ContentType?.MediaType);
+        AssertRetryAfterWithin(limited, ForgotPasswordAddressWindowSeconds);
 
         // The same holds for an address with no account: the 429 is no existence oracle.
         Assert.Equal(HttpStatusCode.NoContent, (await ForgotAsync(client, "203.0.113.20", "nobody@example.test", cancellationToken)).StatusCode);
@@ -156,6 +206,14 @@ public sealed class RateLimitingTests
         using var refused = await LoginAsync(client, "192.0.2.80", cancellationToken, "other@example.test", "Passw0rd!");
         Assert.Equal(HttpStatusCode.Unauthorized, refused.StatusCode);
         Assert.Contains("Invalid credentials.", await refused.Content.ReadAsStringAsync(cancellationToken), StringComparison.Ordinal);
+    }
+
+    /// <summary>The window the service reports instead of waiting for it to renew (spec NFR-002).</summary>
+    private static void AssertRetryAfterWithin(HttpResponseMessage response, int windowSeconds)
+    {
+        var seconds = response.Headers.RetryAfter?.Delta?.TotalSeconds;
+        Assert.NotNull(seconds);
+        Assert.InRange(seconds.Value, 1, windowSeconds);
     }
 
     private static Task<HttpResponseMessage> LoginAsync(

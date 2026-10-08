@@ -2,8 +2,9 @@
 # Phase 7 disposable Compose demonstration (Gate G7 deployment evidence).
 # Proves, over real Compose services, a disposable reference proxy, and disposable storage: Identity lockout
 # after five failures; an application 429 (application/problem+json) for each of the four anonymous policies
-# and for the per-address recovery limit, independent of each other and of the account lockout; window renewal
-# after only the Retry-After the service returned; that a forged X-Forwarded-For sent directly is ignored and that
+# and for the per-address recovery limit, independent of each other and of the account lockout, each with a
+# Retry-After no longer than its configured window (no step waits for a window to renew; spec NFR-002, Constitution VI);
+# that a forged X-Forwarded-For sent directly is ignored and that
 # the reference proxy's overwritten header makes the client (not the proxy, not the forgery) the effective
 # origin; the proxy's own first-layer 429; and that no secret reaches the auth-api logs while the lockout,
 # login-failure, and rate-limit events do. Finishes with the Phase 6 acceptance (which runs Phases 5-1).
@@ -36,9 +37,9 @@ export AUTH_SMTP_USERNAME="smtp-user"
 export AUTH_SMTP_PASSWORD="smtp-secret-pw"
 export AUTH_SMTP_SENDER_ADDRESS="no-reply@acceptance.invalid"
 export AUTH_SMTP_SENDER_NAME="Authentication API Acceptance"
-# Small, explicit limits so each policy can be exhausted quickly; the login window is short enough to renew.
+# Small, explicit limits so each policy can be exhausted quickly, with windows long enough that no step crosses one.
 export AUTH_RATE_LIMIT_LOGIN_PERMIT_LIMIT="8"
-export AUTH_RATE_LIMIT_LOGIN_WINDOW_SECONDS="10"
+export AUTH_RATE_LIMIT_LOGIN_WINDOW_SECONDS="300"
 export AUTH_RATE_LIMIT_REFRESH_PERMIT_LIMIT="3"
 export AUTH_RATE_LIMIT_REFRESH_WINDOW_SECONDS="60"
 export AUTH_RATE_LIMIT_FORGOT_PASSWORD_PERMIT_LIMIT="4"
@@ -99,6 +100,15 @@ refresh() { post "$BASE" /api/auth/refresh '{}' --header "Origin: $AUTH_FRONTEND
 
 header_value() { { grep -i "^$1:" "$HEADER_FILE" || true; } | head -n1 | cut -d: -f2- | tr -d '\r' | sed 's/^ *//'; }
 
+# assert_retry_after WINDOW_SECONDS LABEL: the last 429 reports a wait that is positive and within the window.
+# The window is asserted as reported; the script never sleeps for it to renew.
+assert_retry_after() {
+  local seconds
+  seconds="$(header_value Retry-After)"
+  [[ "$seconds" =~ ^[0-9]+$ ]] && [ "$seconds" -ge 1 ] && [ "$seconds" -le "$1" ] \
+    || fail "the $2 429 Retry-After '$seconds' is not within 1..$1 seconds"
+}
+
 # --- Disposable external storage ------------------------------------------------------------------------
 install -d -m 0755 "$STATE/keys"
 install -d -m 0777 "$STATE/data"
@@ -129,12 +139,12 @@ done
 grep -q "Invalid credentials." "$BODY_FILE" || fail "the locked-account response differs from a wrong-password response"
 pass "five wrong passwords lock the account: even the correct password is refused with the generic 401"
 
-# --- Application request limits (login policy: 8 per 10 s; 8 requests used so far) ---------------------------
-[ "$(login "$MEMBER_EMAIL" "$WRONG_PASSWORD")" = 401 ] || fail "the eighth login was not answered normally"
+# --- Application request limits (login policy: 8 per 300 s; 7 requests used so far) --------------------------
+# The eighth (last permitted) login names an unknown account: answered like any credential failure.
+[ "$(login "nobody@example.test" "$WRONG_PASSWORD")" = 401 ] || fail "the eighth login was not answered normally"
 [ "$(login "$MEMBER_EMAIL" "$WRONG_PASSWORD")" = 429 ] || fail "the ninth login was not rate limited"
 grep -qi '^content-type: application/problem+json' "$HEADER_FILE" || fail "the login 429 is not application/problem+json"
-RETRY_AFTER="$(header_value Retry-After)"
-[ -n "$RETRY_AFTER" ] || fail "the login 429 carries no Retry-After"
+assert_retry_after "$AUTH_RATE_LIMIT_LOGIN_WINDOW_SECONDS" login
 jq -e '.title == "Too Many Requests"' "$BODY_FILE" >/dev/null || fail "the 429 body is not the expected problem details"
 grep -q "$MEMBER_EMAIL" "$BODY_FILE" && fail "the 429 body names an account"
 
@@ -143,22 +153,20 @@ grep -q "$MEMBER_EMAIL" "$BODY_FILE" && fail "the 429 body names an account"
 [ "$(forgot "nobody-0@example.test")" = 204 ] || fail "forgot-password was affected by the login limit"
 pass "login 429 (problem+json, Retry-After) while the other policies still answer; the lockout stayed in force"
 
-# Renewal: wait only the Retry-After the service itself returned.
-sleep "$RETRY_AFTER"
-[ "$(login "nobody@example.test" "$WRONG_PASSWORD")" = 401 ] || fail "the login window did not renew after Retry-After"
-pass "after only the returned Retry-After the login window renewed"
-
 # refresh (3 per 60 s; one used by the probe above)
 STATUSES=""
 for _ in 1 2 3 4; do STATUSES="$STATUSES $(refresh)"; done
 [ "${STATUSES# }" = "401 401 429 429" ] || fail "refresh limit sequence was '${STATUSES# }'"
+assert_retry_after "$AUTH_RATE_LIMIT_REFRESH_WINDOW_SECONDS" refresh
 
 # forgot-password: policy 4 per 60 s (one used), address 2 per 60 s (one used for nobody-0)
 [ "$(forgot "nobody-0@example.test")" = 204 ] || fail "second request for one address was not answered normally"
 [ "$(forgot "NOBODY-0@example.test")" = 429 ] || fail "the per-address recovery limit did not apply across letter case"
 jq -e '.title == "Too Many Requests"' "$BODY_FILE" >/dev/null || fail "the address 429 body is not problem details"
+assert_retry_after "$AUTH_RATE_LIMIT_FORGOT_PASSWORD_ADDRESS_WINDOW_SECONDS" forgot-password-address
 [ "$(forgot "nobody-1@example.test")" = 204 ] || fail "a different address was limited"
 [ "$(forgot "nobody-2@example.test")" = 429 ] || fail "the forgot-password policy did not apply"
+assert_retry_after "$AUTH_RATE_LIMIT_FORGOT_PASSWORD_WINDOW_SECONDS" forgot-password
 pass "refresh and forgot-password limits (per origin and per address) answer 429 independently"
 
 # --- Trusted proxy boundary -----------------------------------------------------------------------------------
@@ -167,6 +175,7 @@ for expected in 401 401 401 429; do
   [ "$(reset_password "$PROXY")" = "$expected" ] || fail "reset-password through the proxy did not follow 401,401,401,429"
 done
 grep -qi '^content-type: application/problem+json' "$HEADER_FILE" || fail "the application 429 through the proxy is not problem+json"
+assert_retry_after "$AUTH_RATE_LIMIT_RESET_PASSWORD_WINDOW_SECONDS" reset-password
 pass "reset-password limit reached through the reference proxy (application 429)"
 
 # The proxy's own first layer (looser: 60 r/min, burst 20) answers with an HTML 429.
@@ -211,7 +220,8 @@ docker compose down -v >/dev/null
         AUTH_RATE_LIMIT_LOGIN_PERMIT_LIMIT AUTH_RATE_LIMIT_LOGIN_WINDOW_SECONDS AUTH_RATE_LIMIT_REFRESH_PERMIT_LIMIT \
         AUTH_RATE_LIMIT_REFRESH_WINDOW_SECONDS AUTH_RATE_LIMIT_FORGOT_PASSWORD_PERMIT_LIMIT AUTH_RATE_LIMIT_FORGOT_PASSWORD_WINDOW_SECONDS \
         AUTH_RATE_LIMIT_RESET_PASSWORD_PERMIT_LIMIT AUTH_RATE_LIMIT_RESET_PASSWORD_WINDOW_SECONDS \
-        AUTH_RATE_LIMIT_FORGOT_PASSWORD_ADDRESS_PERMIT_LIMIT AUTH_RATE_LIMIT_FORGOT_PASSWORD_ADDRESS_WINDOW_SECONDS
+        AUTH_RATE_LIMIT_FORGOT_PASSWORD_ADDRESS_PERMIT_LIMIT AUTH_RATE_LIMIT_FORGOT_PASSWORD_ADDRESS_WINDOW_SECONDS \
+        AUTH_LOCKOUT_MAX_FAILED_ATTEMPTS AUTH_LOCKOUT_DURATION AUTH_TRUSTED_PROXIES AUTH_TRUSTED_NETWORKS
   "$REPO_ROOT/tests/acceptance/phase-6.sh"
 ) || fail "Phase 6 regression failed"
 pass "Phase 6 acceptance regression (includes Phases 5, 4, 3, 2 and 1)"

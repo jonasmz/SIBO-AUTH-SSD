@@ -84,9 +84,11 @@ tests/acceptance/phase-7.sh         # Compose lifecycle with a disposable refere
 ```
 
 Requires `docker compose`, `openssl`, `curl`, `jq`, and access to pull the pinned `nginx:stable-alpine` image.
-No automated test waits for wall-clock time: lockout expiry is exercised by moving the persisted `LockoutEnd`
-(Identity reads the system clock), and window renewal is demonstrated once by the acceptance script, which waits
-only the `Retry-After` the service returned. The reusable validation guide is
+No test or acceptance step waits for wall-clock time (spec NFR-002, Constitution VI): lockout expiry is exercised
+by moving the persisted `LockoutEnd` (Identity reads the system clock), and every application `429` is checked to
+report a `Retry-After` that is positive and no longer than the configured window; window renewal itself is the
+framework limiter's fixed-window behavior and is verified by inspection of the configured options. The only polling
+left in the acceptance script is the readiness wait shared with Phases 1–6. The reusable validation guide is
 `specs/007-phase-7-security-hardening/quickstart.md`.
 
 ## Gate G7 evidence (recorded 2026-10-08)
@@ -94,9 +96,9 @@ only the `Retry-After` the service returned. The reusable validation guide is
 | State | Evidence | Result |
 |---|---|---|
 | Build | `dotnet build --no-incremental -warnaserror` | PASS, 0 warnings, 0 errors |
-| Tests | `dotnet test` | PASS, 179 of 179 (unit and integration), 0 skipped |
+| Tests | `dotnet test` | PASS, 181 of 181 (unit and integration), 0 skipped |
 | Startup | `phase-7.sh`: stack and reference proxy ready on disposable storage | PASS |
-| Feature | `phase-7.sh`: five-failure lockout; application `429` per policy and for the recovery address, independent of each other and of the lockout; renewal after the returned `Retry-After`; forged `X-Forwarded-For` ignored directly and overwritten by the proxy; the proxy's own HTML `429`; lockout, login-failure, and rate-limit events with UTC time and trace and no secret or email in the logs | PASS |
+| Feature | `phase-7.sh`: five-failure lockout; application `429` per policy and for the recovery address, independent of each other and of the lockout, each with a `Retry-After` within its configured window (no step waits for a window to renew); forged `X-Forwarded-For` ignored directly and overwritten by the proxy; the proxy's own HTML `429`; lockout, login-failure, and rate-limit events with UTC time and trace and no secret or email in the logs | PASS |
 | Regression | `phase-7.sh` finishing with `phase-6.sh` → `phase-5.sh` → `phase-4.sh` → `phase-3.sh` → `phase-2.sh` → `phase-1.sh` | PASS (all report ALL PASS) |
 
 Scope boundaries:
