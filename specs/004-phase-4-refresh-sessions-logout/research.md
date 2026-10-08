@@ -37,9 +37,10 @@ tokens were prohibited.
 
 ## 3. Absolute lifetime
 
-**Decision**: Add required external `RefreshSession:LifetimeDays`, defaulting to `7`, and validate a
-positive bounded value at startup. At login, set the family and initial credential to one absolute
-UTC expiry. Every replacement inherits that exact expiry and does not extend it.
+**Decision**: Add external `RefreshSession:LifetimeDays`, defaulting to `7`, and validate at startup
+that the value is positive and can be converted and added to the current instant without overflow.
+No policy maximum is invented. At login, set the family and initial credential to one absolute UTC
+expiry. Every replacement inherits that exact expiry and does not extend it.
 
 **Rationale**: This implements a configurable absolute lifetime and makes the prohibition on sliding
 or independent session lifetime observable. `TimeProvider.GetUtcNow()` supplies all timestamps and

@@ -27,7 +27,7 @@ session invariants, configuration, and API security boundary work is completed f
 **Purpose**: Establish the Phase 4 configuration and public-contract baseline without changing
 unrelated deployment or consumer behavior.
 
-- [ ] T001 Add externally validated `RefreshSession:LifetimeDays` (default `7`) and required `Security:FrontendOrigin` configuration entries in `src/Authentication.Api/appsettings.json`.
+- [ ] T001 Add externally validated `RefreshSession:LifetimeDays` (default `7`) and required `Security:FrontendOrigin` configuration in `src/Authentication.Api/appsettings.json`, propagate `Security__FrontendOrigin` and the optional lifetime override through `compose.yml`, and document runnable example values in `.env.example`; invalid or missing required configuration must fail fast without exposing its value.
 - [ ] T002 [P] Document Phase 4 `auth_refresh` cookie attributes, Origin requirement, response schemas, and 204/401/403/404 outcomes in `specs/004-phase-4-refresh-sessions-logout/contracts/authentication-api-sessions.openapi.yaml`.
 - [ ] T003 [P] Extend reusable test configuration and cookie/origin request helpers for Phase 4 in `tests/Authentication.IntegrationTests/Infrastructure/AuthenticationApiFactory.cs`.
 
@@ -42,15 +42,15 @@ primitive, and application contracts that block all session stories.
 
 - [ ] T004 Define renewable-family state and irreversible revocation reasons in `src/Authentication.Domain/Sessions/RenewableSessionFamily.cs` with required immutable user, UTC creation, absolute expiry, and write-once revocation state.
 - [ ] T005 Define refresh-credential chain state in `src/Authentication.Domain/Sessions/RefreshCredential.cs` with a required `byte[32]` SHA-256 verifier, write-once consumption/revocation, and at most one replacement in the same family.
-- [ ] T006 [P] Add pure state-transition invariant coverage for active/expired/revoked families and consumed credential replacement in `tests/Authentication.UnitTests/Domain/RenewableSessionFamilyTests.cs`.
-- [ ] T007 [P] Add pure state-transition invariant coverage for credential consumption and one-replacement rules in `tests/Authentication.UnitTests/Domain/RefreshCredentialTests.cs`.
-- [ ] T008 Add session issuance, rotation, lookup, and family-revocation application contracts and result types in `src/Authentication.Application/Features/Sessions/IRenewableSessionStore.cs`.
-- [ ] T009 Add `RefreshSessionOptions` validation for a positive bounded lifetime and configured frontend origin in `src/Authentication.Infrastructure/Sessions/RefreshSessionOptions.cs`.
+- [ ] T006 [P] After T004, add pure state-transition invariant coverage for active/expired/revoked families and consumed credential replacement in `tests/Authentication.UnitTests/Domain/RenewableSessionFamilyTests.cs`.
+- [ ] T007 [P] After T005, add pure state-transition invariant coverage for credential consumption and one-replacement rules in `tests/Authentication.UnitTests/Domain/RefreshCredentialTests.cs`.
+- [ ] T008 Add session issuance, rotation, lookup, and family-revocation application contracts under `src/Authentication.Application/Features/Sessions/`, keeping `IRenewableSessionStore` in `IRenewableSessionStore.cs` and every command/result/outcome as one top-level type in its own matching file.
+- [ ] T009 Add `RefreshSessionOptions` validation for a positive lifetime whose conversion and addition cannot overflow, plus a syntactically valid absolute configured frontend origin, in `src/Authentication.Infrastructure/Sessions/RefreshSessionOptions.cs`; do not invent a policy maximum absent from the specification.
 - [ ] T010 Implement 256-bit CSPRNG base64url credential creation, strict malformed-value rejection, and SHA-256 verifier derivation without logging raw values or digests in `src/Authentication.Infrastructure/Sessions/RefreshCredentialProtector.cs`.
 - [ ] T011 Add `RenewableSessionFamily` and `RefreshCredential` entity mappings, unique verifier and required family/user indexes, restrictive foreign keys, and data-model constraints to `src/Authentication.Infrastructure/Persistence/AuthenticationDbContext.cs`.
-- [ ] T012 Create the Phase 4 migration and update the model snapshot in `src/Authentication.Infrastructure/Persistence/Migrations/20261008_AddRenewableSessions.cs` and `src/Authentication.Infrastructure/Persistence/Migrations/AuthenticationDbContextModelSnapshot.cs`.
+- [ ] T012 Generate the Phase 4 migration with `dotnet ef migrations add AddRenewableSessions` and version-control all generated artifacts under `src/Authentication.Infrastructure/Persistence/Migrations/`: the timestamped `*AddRenewableSessions.cs`, matching `*AddRenewableSessions.Designer.cs`, and updated `AuthenticationDbContextModelSnapshot.cs`; verify startup discovers and applies it.
 - [ ] T013 Register validated session options, credential protection, session store, and their existing startup migration lifecycle in `src/Authentication.Infrastructure/DependencyInjection.cs` and `src/Authentication.Api/Program.cs`.
-- [ ] T014 Add real temporary-file SQLite coverage for migration, unique verifier persistence, and revoked-family persistence across a recreated Auth API factory in `tests/Authentication.IntegrationTests/Scenarios/RenewableSessionPersistenceTests.cs`.
+- [ ] T014 Add real temporary-file SQLite coverage for migration discovery/application, unique verifier persistence, proof that the issued raw refresh value is absent from every persisted session column and only its 32-byte digest is stored, and revoked-family persistence across a recreated Auth API factory in `tests/Authentication.IntegrationTests/Scenarios/RenewableSessionPersistenceTests.cs`.
 
 **Checkpoint**: Session state is owned by the existing Authentication database, starts through the
 existing initializer, survives restart, and has no consumer-API dependency.
@@ -68,7 +68,7 @@ one persistent renewable family whose raw credential exists only in a restrictiv
 ### Tests for User Story 1
 
 - [ ] T015 [P] [US1] Add consolidated login-session integration scenarios for successful family creation, unchanged access-token JSON shape, restrictive cookie attributes, and no session on failed/disabled/locked login in `tests/Authentication.IntegrationTests/Scenarios/RenewableLoginSessionTests.cs`.
-- [ ] T016 [P] [US1] Add integration assertions that `RefreshSession:LifetimeDays` defaults to seven and every login-issued family/credential uses the same absolute UTC expiry in `tests/Authentication.IntegrationTests/Scenarios/RefreshSessionConfigurationTests.cs`.
+- [ ] T016 [P] [US1] Add integration assertions that `RefreshSession:LifetimeDays` defaults to seven, rejects non-positive or overflow-producing values, requires a syntactically valid absolute frontend origin, fails fast without disclosing configured values, and gives every login-issued family/credential the same absolute UTC expiry in `tests/Authentication.IntegrationTests/Scenarios/RefreshSessionConfigurationTests.cs`.
 
 ### Implementation for User Story 1
 
@@ -93,16 +93,16 @@ disabled, and locked cases all return indistinguishable 401 responses without co
 
 ### Tests for User Story 2
 
-- [ ] T021 [P] [US2] Add refresh integration scenarios for valid rotation, same-family fixed absolute expiry, current role claims, and rejection of unknown/malformed/expired/revoked credentials in `tests/Authentication.IntegrationTests/Scenarios/RefreshRotationTests.cs`.
+- [ ] T021 [P] [US2] Add refresh integration scenarios for valid rotation without an `Authorization` header, an irrelevant/expired Bearer not being required for success, same-family fixed absolute expiry, current role claims, rejection of unknown/malformed/expired/revoked credentials, and persistence unavailability producing generic 503 ProblemDetails with no replacement cookie in `tests/Authentication.IntegrationTests/Scenarios/RefreshRotationTests.cs`.
 - [ ] T022 [P] [US2] Add deterministic `ControlledTimeProvider` scenarios proving expired, disabled, and Identity-locked users receive the same generic 401 refresh contract with no replacement cookie in `tests/Authentication.IntegrationTests/Scenarios/RefreshCredentialFailureTests.cs`.
 - [ ] T023 [P] [US2] Add Origin-boundary integration scenarios proving missing, malformed, opaque, and mismatched Origin values return 403 before credential processing and the exact configured origin succeeds in `tests/Authentication.IntegrationTests/Scenarios/RefreshOriginProtectionTests.cs`.
 
 ### Implementation for User Story 2
 
-- [ ] T024 [US2] Add refresh command/outcome types that preserve generic unusable-credential outcomes and issue existing access-token claims only after successful rotation in `src/Authentication.Application/Features/Sessions/RefreshSessionHandler.cs`.
+- [ ] T024 [US2] Add refresh orchestration under `src/Authentication.Application/Features/Sessions/`: keep `RefreshSessionHandler` in `RefreshSessionHandler.cs`, and its command and outcome as one top-level type per matching file; preserve generic unusable-credential outcomes and issue existing access-token claims only after successful rotation.
 - [ ] T025 [US2] Implement serialized SQLite refresh consumption: verify family, credential, and current Identity state; consume exactly one current credential; create exactly one same-family replacement; and commit before return in `src/Authentication.Infrastructure/Sessions/RenewableSessionStore.cs`.
 - [ ] T026 [US2] Add exact configured-Origin validation with generic 403 failure and no CORS enablement in `src/Authentication.Api/Features/Sessions/BrowserOriginValidator.cs`.
-- [ ] T027 [US2] Add `POST /api/auth/refresh` mapping that validates Origin before cookie processing, maps every unusable credential state to generic 401 ProblemDetails, and emits the replacement cookie and existing access-token response only on success in `src/Authentication.Api/Features/Sessions/RefreshEndpoint.cs`.
+- [ ] T027 [US2] Add anonymous `POST /api/auth/refresh` mapping that requires no access JWT, validates Origin before cookie processing, maps every unusable credential state to generic 401 ProblemDetails, maps persistence unavailability to generic 503 ProblemDetails, and emits the replacement cookie and existing access-token response only on success in `src/Authentication.Api/Features/Sessions/RefreshEndpoint.cs`.
 - [ ] T028 [US2] Register the refresh-session endpoint group and its API-boundary collaborators in `src/Authentication.Api/Program.cs`.
 
 **Checkpoint**: US2 provides the normal renewable-session path without exposing refresh material in
@@ -144,15 +144,15 @@ after logout.
 
 ### Tests for User Story 4
 
-- [ ] T033 [P] [US4] Add logout integration scenarios for family revocation, matching expired cookie attributes, idempotent 204 behavior, and refresh rejection after logout in `tests/Authentication.IntegrationTests/Scenarios/LogoutTests.cs`.
+- [ ] T033 [P] [US4] Add logout integration scenarios for family revocation, matching expired cookie attributes, idempotent 204 behavior for all credential states, refresh rejection after logout, and persistence unavailability producing generic 503 ProblemDetails rather than false success in `tests/Authentication.IntegrationTests/Scenarios/LogoutTests.cs`.
 - [ ] T034 [P] [US4] Add logout Origin-protection scenarios for missing, malformed, opaque, mismatched, and configured Origin values in `tests/Authentication.IntegrationTests/Scenarios/LogoutOriginProtectionTests.cs`.
 
 ### Implementation for User Story 4
 
-- [ ] T035 [US4] Add a focused idempotent logout command that revokes a known family with reason `Logout` while treating absent, malformed, unknown, expired, or already-revoked credentials as success in `src/Authentication.Application/Features/Sessions/LogoutSessionHandler.cs`.
-- [ ] T036 [US4] Implement known-family logout revocation and secret-free structured logout event logging in `src/Authentication.Infrastructure/Sessions/RenewableSessionStore.cs`.
+- [ ] T035 [US4] Add focused idempotent logout orchestration under `src/Authentication.Application/Features/Sessions/`, keeping `LogoutSessionHandler` and any command/outcome as one top-level type per matching file; revoke a known family with reason `Logout` while treating absent, malformed, unknown, expired, or already-revoked credentials as success.
+- [ ] T036 [US4] Implement known-family logout revocation and secret-free structured logout event logging with UTC event time and ambient `Activity` trace/span/correlation identifiers when available in `src/Authentication.Infrastructure/Sessions/RenewableSessionStore.cs`.
 - [ ] T037 [US4] Add matching expired `auth_refresh` cookie invalidation in `src/Authentication.Api/Features/Sessions/RefreshCookieWriter.cs`.
-- [ ] T038 [US4] Add `POST /api/auth/logout` mapping that validates Origin first, always returns 204 for credential state, clears the cookie, and does not create JWT blacklist state in `src/Authentication.Api/Features/Sessions/LogoutEndpoint.cs`.
+- [ ] T038 [US4] Add `POST /api/auth/logout` mapping that validates Origin first, returns 204 and clears the cookie for every credential state, maps actual persistence unavailability to generic 503 ProblemDetails, and does not create JWT blacklist state in `src/Authentication.Api/Features/Sessions/LogoutEndpoint.cs`.
 
 **Checkpoint**: US4 ends future renewal for the current family while already-issued access JWTs
 remain handled exclusively by normal local validation and expiry.
@@ -170,13 +170,13 @@ prove neither refreshes; verify established 401, 403, and 404 outcomes.
 ### Tests for User Story 5
 
 - [ ] T039 [P] [US5] Add administrative all-family revocation integration scenarios for two independent login families and subsequent refresh rejection in `tests/Authentication.IntegrationTests/Scenarios/AdministrativeSessionRevocationTests.cs`.
-- [ ] T040 [P] [US5] Add integration assertions for administrator endpoint 401, 403, and unknown-user 404 conventions in `tests/Authentication.IntegrationTests/Scenarios/AdministrativeSessionRevocationAccessTests.cs`.
+- [ ] T040 [P] [US5] Add integration assertions for administrator endpoint 401, 403, unknown-user 404, and persistence-unavailable 503 ProblemDetails conventions in `tests/Authentication.IntegrationTests/Scenarios/AdministrativeSessionRevocationAccessTests.cs`.
 
 ### Implementation for User Story 5
 
 - [ ] T041 [US5] Extend the existing user-administration application contract with all-family session revocation and existing-user outcome handling in `src/Authentication.Application/Features/Users/IUserAdministration.cs`.
-- [ ] T042 [US5] Implement atomic active-family lookup/revocation with reason `Administrator` and secret-free structured event logging in `src/Authentication.Infrastructure/Identity/UserAdministration.cs`.
-- [ ] T043 [US5] Add the Administrator-protected `POST /api/admin/users/{id}/revoke-sessions` route preserving existing 401, 403, and 404 ProblemDetails conventions in `src/Authentication.Api/Features/Users/UserAdministrationEndpoints.cs`.
+- [ ] T042 [US5] Implement atomic active-family lookup/revocation with reason `Administrator` and secret-free structured event logging with UTC event time and ambient `Activity` trace/span/correlation identifiers when available in `src/Authentication.Infrastructure/Identity/UserAdministration.cs`.
+- [ ] T043 [US5] Add the Administrator-protected `POST /api/admin/users/{id}/revoke-sessions` route preserving existing 401, 403, 404, and persistence-unavailable 503 ProblemDetails conventions in `src/Authentication.Api/Features/Users/UserAdministrationEndpoints.cs`.
 
 **Checkpoint**: US5 allows containment of all a user’s renewable families without changing consumer
 JWT validation or adding session-management interfaces.
@@ -200,7 +200,7 @@ prove old cookies remain unusable; verify a refused last-Administrator disable p
 ### Implementation for User Story 6
 
 - [ ] T046 [US6] Extend accepted disablement so it changes `IsEnabled` and revokes every active family with reason `UserDisabled` in the same serializable operation, while enablement changes no family, in `src/Authentication.Infrastructure/Identity/UserAdministration.cs`.
-- [ ] T047 [US6] Add secret-free disablement session-revocation event logging only after a successful disable transition in `src/Authentication.Infrastructure/Identity/UserAdministration.cs`.
+- [ ] T047 [US6] Add secret-free disablement session-revocation event logging with UTC event time and ambient `Activity` trace/span/correlation identifiers when available, only after a successful disable transition, in `src/Authentication.Infrastructure/Identity/UserAdministration.cs`.
 
 **Checkpoint**: US6 completes the Phase 3 disablement extension without weakening the
 last-enabled-Administrator protection.
@@ -213,11 +213,11 @@ last-enabled-Administrator protection.
 local consumer validation, and all Phase 1–3 regression behavior.
 
 - [ ] T048 [P] Add a Phase 4 Compose acceptance lifecycle covering login, rotation, replay, concurrent refresh, logout, administrative revocation, disable/enable, restart persistence, and Phase 1–3 regression invocation in `tests/acceptance/phase-4.sh`.
-- [ ] T049 Extend the acceptance log scan for passwords, access tokens, raw refresh cookies, token hashes, and `PRIVATE KEY`, while asserting replay/logout/revocation events are present, in `tests/acceptance/phase-4.sh`.
+- [ ] T049 Extend the acceptance log scan for passwords, access tokens, raw refresh cookies, token hashes, and `PRIVATE KEY`, while asserting replay/logout/administrator/disablement revocation events are present with UTC timestamps and correlation identifiers when the requests expose them, in `tests/acceptance/phase-4.sh`.
 - [ ] T050 [P] Add consumer integration evidence that APIs A and B accept a pre-revocation unexpired JWT locally after logout, replay, disablement, and administrative revocation in `tests/Authentication.IntegrationTests/Scenarios/ConsumerValidationTests.cs`.
-- [ ] T051 Run build and the complete unit/integration suite, resolve Phase 4 and Phase 1–3 regressions, and record the commands and PASS evidence in `specs/004-phase-4-refresh-sessions-logout/quickstart.md`.
-- [ ] T052 Run the disposable Phase 4 acceptance script and record all five Gate G4 evidence states—build, tests, startup, feature, and regression—in `specs/004-phase-4-refresh-sessions-logout/quickstart.md`.
-- [ ] T053 Review implementation and acceptance evidence against Roadmap §10.10, update only the authorized Phase 4 progress/gate record, and create the identifiable Gate G4 closing commit after every criterion passes in `baseline/ROADMAP_SPECKIT_AUTH_API_v1.1.md`.
+- [ ] T051 Run build and the complete unit/integration suite, resolve Phase 4 and Phase 1–3 regressions, and create `docs/phase-4-operations.md` recording exact commands, environment/configuration prerequisites, and PASS evidence while keeping `specs/004-phase-4-refresh-sessions-logout/quickstart.md` as a reusable validation guide.
+- [ ] T052 Run the disposable Phase 4 acceptance script and record all five Gate G4 evidence states—build, tests, startup, feature, and regression—in `docs/phase-4-operations.md`, linked to the focused test and acceptance output.
+- [ ] T053 After T001-T052, review implementation and evidence against Roadmap §10.10, present `docs/phase-4-operations.md` to the project owner, and obtain explicit Gate G4 approval. Only after that approval, update the authorized Phase 4 checklist/status/progress records in `baseline/ROADMAP_SPECKIT_AUTH_API_v1.1.md` and `specs/004-phase-4-refresh-sessions-logout/checklists/requirements.md`, record the approval date/evidence reference without changing normative requirements, and create the identifiable Gate G4 closing commit; never mark Phase 4 complete or create the closing commit before approval.
 
 ---
 
@@ -227,6 +227,7 @@ local consumer validation, and all Phase 1–3 regression behavior.
 
 - **Phase 1** has no implementation dependencies.
 - **Phase 2** depends on Phase 1 and blocks all story phases.
+- **T006** depends on T004 and **T007** depends on T005; after those model types exist, the two test tasks may run in parallel.
 - **US1** depends on Phase 2.
 - **US2** depends on US1 because it consumes the login-issued credential.
 - **US3** depends on US2 because replay is defined from a successful rotation.
