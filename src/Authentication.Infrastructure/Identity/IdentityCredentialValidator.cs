@@ -69,6 +69,8 @@ public sealed class IdentityCredentialValidator(
             await userManager.ResetAccessFailedCountAsync(user);
         }
 
+        SecurityEvents.LoginSucceeded(logger, user.Id, timeProvider.GetUtcNow(), Activity.Current?.TraceId.ToString(), Activity.Current?.SpanId.ToString());
+
         var roles = await userManager.GetRolesAsync(user);
 
         return new AuthenticatedIdentity(user.Id, user.Email ?? email, [.. roles]);

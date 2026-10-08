@@ -35,6 +35,8 @@ export AUTH_RATE_LIMIT_FORGOT_PASSWORD_ADDRESS_PERMIT_LIMIT="${AUTH_RATE_LIMIT_F
 export AUTH_JWT_AUDIENCE="authentication-clients"
 export AUTH_HTTP_PORT="$PORT"
 export COMPOSE_PROJECT_NAME="auth-api-phase1-acceptance"
+# Phase 8: disposable logs, frontend inputs, and the direct-access override for the final topology.
+source "$REPO_ROOT/tests/acceptance/deployment-env.sh"
 
 pass() { printf 'PASS  %s\n' "$1"; }
 fail() { printf 'FAIL  %s\n' "$1" >&2; exit 1; }

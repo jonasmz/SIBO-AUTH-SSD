@@ -1,11 +1,45 @@
+# Production topology (Phase 8): exactly four services. `frontend` is the single external entry point (static
+# files + reverse proxy, HTTPS terminated there); auth-api, api-a and api-b publish no port and are reachable only
+# through it on the internal network. Persistent data lives on host bind mounts, outside the Compose lifecycle.
+# Operations guide: docs/phase-8-operations.md. Contract:
+# specs/008-phase-8-operations-final-integration/contracts/deployment-topology.md
 services:
+  frontend:
+    # Official image pinned by the digest validated in Phase 7 (nginx 1.30.5).
+    image: nginx:stable-alpine@sha256:0985e772fb9f729e6fa0980da05fca5d9c468e870eed43071545afa9d2e27d94
+    depends_on:
+      - auth-api
+      - api-a
+      - api-b
+    ports:
+      - "${FRONTEND_HTTPS_PORT:-443}:443"
+      - "${FRONTEND_HTTP_PORT:-80}:80"
+    volumes:
+      - type: bind
+        source: ./deploy/frontend/nginx.conf
+        target: /etc/nginx/conf.d/default.conf
+        read_only: true
+      # The compiled Angular application, supplied by the project owner (not built here).
+      - type: bind
+        source: ${FRONTEND_STATIC_HOST_PATH:?set FRONTEND_STATIC_HOST_PATH}
+        target: /usr/share/nginx/html
+        read_only: true
+      # tls.crt and tls.key for the external origin.
+      - type: bind
+        source: ${FRONTEND_TLS_HOST_PATH:?set FRONTEND_TLS_HOST_PATH}
+        target: /etc/nginx/tls
+        read_only: true
+    networks:
+      default:
+        # Fixed, so auth-api can trust forwarded headers from this address only.
+        ipv4_address: ${FRONTEND_INTERNAL_ADDRESS:-172.30.80.10}
+
   auth-api:
     build:
       context: .
       dockerfile: src/Authentication.Api/Dockerfile
-    ports:
-      - "${AUTH_HTTP_PORT:-8080}:8080"
     environment:
+      ASPNETCORE_ENVIRONMENT: Production
       Persistence__ConnectionString: "Data Source=/var/lib/auth-api/data/auth.db"
       Jwt__Issuer: "${AUTH_JWT_ISSUER:?set AUTH_JWT_ISSUER}"
       Jwt__Audience: "${AUTH_JWT_AUDIENCE:?set AUTH_JWT_AUDIENCE}"
@@ -15,6 +49,8 @@ services:
       RefreshSession__LifetimeDays: "${AUTH_REFRESH_SESSION_LIFETIME_DAYS:-7}"
       Security__FrontendOrigin: "${AUTH_FRONTEND_ORIGIN:?set AUTH_FRONTEND_ORIGIN}"
       DataProtection__KeysPath: "/var/lib/auth-api/dataprotection"
+      Logging__File__Directory: "/app/logs"
+      Logging__File__RetentionDays: "${AUTH_LOG_RETENTION_DAYS:-30}"
       Smtp__Host: "${AUTH_SMTP_HOST:?set AUTH_SMTP_HOST}"
       Smtp__Port: "${AUTH_SMTP_PORT:?set AUTH_SMTP_PORT}"
       Smtp__Security: "${AUTH_SMTP_SECURITY:?set AUTH_SMTP_SECURITY}"
@@ -36,12 +72,14 @@ services:
       RateLimiting__ResetPassword__WindowSeconds: "${AUTH_RATE_LIMIT_RESET_PASSWORD_WINDOW_SECONDS:-}"
       RateLimiting__ForgotPasswordAddress__PermitLimit: "${AUTH_RATE_LIMIT_FORGOT_PASSWORD_ADDRESS_PERMIT_LIMIT:-}"
       RateLimiting__ForgotPasswordAddress__WindowSeconds: "${AUTH_RATE_LIMIT_FORGOT_PASSWORD_ADDRESS_WINDOW_SECONDS:-}"
-      ReverseProxy__TrustedProxies: "${AUTH_TRUSTED_PROXIES:-}"
+      # Only the frontend's fixed address may supply X-Forwarded-For / X-Forwarded-Proto.
+      ReverseProxy__TrustedProxies: "${AUTH_TRUSTED_PROXIES:-${FRONTEND_INTERNAL_ADDRESS:-172.30.80.10}}"
       ReverseProxy__TrustedNetworks: "${AUTH_TRUSTED_NETWORKS:-}"
     volumes:
       - type: bind
         source: ${AUTH_SQLITE_HOST_PATH:?set AUTH_SQLITE_HOST_PATH}
         target: /var/lib/auth-api/data
+      # The private signing key is mounted only into auth-api, read-only.
       - type: bind
         source: ${AUTH_RSA_HOST_PATH:?set AUTH_RSA_HOST_PATH}
         target: /var/lib/auth-api/keys
@@ -51,15 +89,18 @@ services:
       - type: bind
         source: ${AUTH_DATAPROTECTION_HOST_PATH:?set AUTH_DATAPROTECTION_HOST_PATH}
         target: /var/lib/auth-api/dataprotection
+      # Persistent daily log files (UTC), kept outside the Compose lifecycle.
+      - type: bind
+        source: ${AUTH_LOGS_HOST_PATH:?set AUTH_LOGS_HOST_PATH}
+        target: /app/logs
 
   api-a:
     image: reference-consumer-api:dev
     build:
       context: .
       dockerfile: src/ReferenceConsumer.Api/Dockerfile
-    ports:
-      - "${API_A_HTTP_PORT:-8081}:8080"
     environment: &consumer-environment
+      ASPNETCORE_ENVIRONMENT: Production
       Jwt__Issuer: "${AUTH_JWT_ISSUER:?set AUTH_JWT_ISSUER}"
       Jwt__Audience: "${AUTH_JWT_AUDIENCE:?set AUTH_JWT_AUDIENCE}"
       Jwt__ClockSkewSeconds: "${AUTH_JWT_CLOCK_SKEW_SECONDS:-30}"
@@ -77,9 +118,13 @@ services:
     build:
       context: .
       dockerfile: src/ReferenceConsumer.Api/Dockerfile
-    ports:
-      - "${API_B_HTTP_PORT:-8082}:8080"
     environment:
       <<: *consumer-environment
       Service__Name: api-b
     volumes: *consumer-volumes
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${AUTH_INTERNAL_SUBNET:-172.30.80.0/24}

@@ -52,6 +52,9 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
         SetEnvironmentVariable("RefreshSession__LifetimeDays", refreshSessionLifetimeDays.ToString(System.Globalization.CultureInfo.InvariantCulture));
         SetEnvironmentVariable("Security__FrontendOrigin", frontendOrigin ?? string.Empty);
         SetEnvironmentVariable("DataProtection__KeysPath", dataProtectionKeysPath ?? _resources.DataProtectionKeysPath);
+        // Persistent log files go to the resource set's temporary directory; a test can override it through
+        // additionalSettings (for example to point at a missing or unwritable directory).
+        SetEnvironmentVariable("Logging__File__Directory", _resources.LogsPath);
 
         // Valid dummy SMTP settings; the default capturing sender never connects to them.
         SetEnvironmentVariable("Smtp__Host", "smtp.test.invalid");

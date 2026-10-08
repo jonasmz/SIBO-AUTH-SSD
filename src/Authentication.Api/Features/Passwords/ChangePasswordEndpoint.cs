@@ -1,3 +1,4 @@
+using Authentication.Api.Documentation;
 using System.Data.Common;
 using System.Text.Json;
 using Authentication.Application.Features.Passwords;
@@ -11,7 +12,14 @@ public static class ChangePasswordEndpoint
 {
     public static IEndpointRouteBuilder MapChangePasswordEndpoint(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/auth/change-password", HandleAsync).RequireAuthorization();
+        endpoints.MapPost("/api/auth/change-password", HandleAsync)
+            .RequireAuthorization()
+            .WithSummary("Change the signed-in user's own password")
+            .DocumentsJsonRequest<ChangePasswordRequest>()
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         return endpoints;
     }
