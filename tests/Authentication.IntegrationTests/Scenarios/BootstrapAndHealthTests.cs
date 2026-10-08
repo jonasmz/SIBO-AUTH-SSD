@@ -57,6 +57,7 @@ public sealed class BootstrapAndHealthTests
 
         var message = string.Join(" | ", Flatten(failure).Select(exception => exception.Message));
         Assert.Contains("initialization failed", message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("migration", message, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("secret-auth.db", message, StringComparison.Ordinal);
         Assert.DoesNotContain(factory.Resources.PrivateKeyPath, message, StringComparison.Ordinal);
     }
@@ -91,6 +92,53 @@ public sealed class BootstrapAndHealthTests
 
         using var live = await client.GetAsync("/health/live", cancellationToken);
         Assert.Equal(HttpStatusCode.OK, live.StatusCode);
+    }
+
+    private const string KeyMaterialMarker = "TOP-SECRET-KEY-MATERIAL";
+
+    [Theory]
+    [InlineData("missing")]
+    [InlineData("invalid-pem")]
+    public void UnavailableSigningKeyTerminatesStartupNamingTheSettingWithoutLeakingKeyMaterial(string scenario)
+    {
+        using var factory = new AuthenticationApiFactory();
+        if (scenario == "missing")
+        {
+            File.Delete(factory.Resources.PrivateKeyPath);
+        }
+        else
+        {
+            File.WriteAllText(
+                factory.Resources.PrivateKeyPath,
+                $"-----BEGIN RSA PRIVATE KEY-----\n{KeyMaterialMarker}\n-----END RSA PRIVATE KEY-----\n");
+        }
+
+        AssertStartupRejectedWithoutLeak(factory);
+    }
+
+    [Fact]
+    [System.Runtime.Versioning.SupportedOSPlatform("linux")]
+    public void UnreadableSigningKeyTerminatesStartupNamingTheSettingWithoutLeakingKeyMaterial()
+    {
+        Assert.SkipWhen(
+            !OperatingSystem.IsLinux() || Environment.IsPrivilegedProcess,
+            "File permissions cannot deny access to Windows or privileged (root) processes.");
+
+        using var factory = new AuthenticationApiFactory();
+        File.SetUnixFileMode(factory.Resources.PrivateKeyPath, UnixFileMode.None);
+
+        AssertStartupRejectedWithoutLeak(factory);
+    }
+
+    private static void AssertStartupRejectedWithoutLeak(AuthenticationApiFactory factory)
+    {
+        var failure = Assert.ThrowsAny<Exception>(() => factory.CreateClient());
+
+        var message = string.Join(" | ", Flatten(failure).Select(exception => exception.Message));
+        Assert.Contains("Jwt:PrivateKeyPath", message, StringComparison.Ordinal);
+        Assert.DoesNotContain(factory.Resources.PrivateKeyPath, message, StringComparison.Ordinal);
+        Assert.DoesNotContain(KeyMaterialMarker, message, StringComparison.Ordinal);
+        Assert.DoesNotContain("BEGIN", message, StringComparison.Ordinal);
     }
 
     private static IEnumerable<Exception> Flatten(Exception exception)

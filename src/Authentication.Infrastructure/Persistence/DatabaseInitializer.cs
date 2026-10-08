@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -21,6 +22,8 @@ public sealed partial class DatabaseInitializer(
     {
         state.MarkNotReady();
 
+        var stage = "migration";
+
         try
         {
             using var scope = scopeFactory.CreateScope();
@@ -28,13 +31,15 @@ public sealed partial class DatabaseInitializer(
             var context = services.GetRequiredService<AuthenticationDbContext>();
 
             await context.Database.MigrateAsync(cancellationToken);
+            stage = "bootstrap";
             await BootstrapAsync(context, services, cancellationToken);
         }
         catch (Exception exception)
         {
             var exceptionType = exception.GetType().Name;
-            LogInitializationFailed(logger, exceptionType);
-            throw new InvalidOperationException("Authentication API initialization failed.");
+            var sqliteErrorCode = exception is SqliteException sqliteException ? sqliteException.SqliteErrorCode : 0;
+            LogInitializationFailed(logger, stage, exceptionType, sqliteErrorCode);
+            throw new InvalidOperationException($"Authentication API initialization failed during {stage}.");
         }
 
         state.MarkReady();
@@ -77,8 +82,14 @@ public sealed partial class DatabaseInitializer(
         await transaction.CommitAsync(cancellationToken);
     }
 
-    [LoggerMessage(Level = LogLevel.Critical, Message = "Authentication API initialization failed ({ExceptionType}).")]
-    private static partial void LogInitializationFailed(ILogger logger, string exceptionType);
+    [LoggerMessage(
+        Level = LogLevel.Critical,
+        Message = "Authentication API initialization failed during {Stage} ({ExceptionType}, SQLite error code {SqliteErrorCode}).")]
+    private static partial void LogInitializationFailed(
+        ILogger logger,
+        string stage,
+        string exceptionType,
+        int sqliteErrorCode);
 
     private static void Ensure(IdentityResult result)
     {

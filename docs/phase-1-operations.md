@@ -49,7 +49,7 @@ Recorded on 2026-10-07 against the working tree of branch `001-phase-1-bootstrap
 | Evidence | Command | Result |
 |---|---|---|
 | Build | `dotnet build Authentication.slnx` | PASS — 0 warnings, 0 errors |
-| Automated tests | `dotnet test --solution Authentication.slnx` | PASS — 16/16 (15 integration, 1 unit), 0 skipped |
+| Automated tests | `dotnet test --solution Authentication.slnx` | PASS — 19/19 (18 integration, 1 unit), 0 skipped |
 | Empty-storage startup, internal migrations/bootstrap | `tests/acceptance/phase-1.sh` | PASS |
 | Login / RS256 JWT issuance | `LoginAndJwtTests` + acceptance login | PASS |
 | Liveness / readiness | `BootstrapAndHealthTests` + acceptance probes | PASS |
@@ -65,5 +65,6 @@ PASS  empty-storage startup, SQLite creation, ready, login
 PASS  restart: ready, login, stable subject
 PASS  down -v: SQLite and RSA key survived, stable subject and fingerprint
 PASS  initialization failure: container exited, never ready, no secrets in logs
+PASS  missing signing key: container exited, never ready, setting named, no secrets in logs
 Phase 1 acceptance: ALL PASS
 ```

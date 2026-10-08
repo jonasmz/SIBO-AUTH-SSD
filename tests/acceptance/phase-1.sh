@@ -105,8 +105,23 @@ if curl --fail --silent "$BASE/health/ready" >/dev/null 2>&1; then fail "reporte
 STATUS="$(docker compose ps --all --format '{{.State}}' auth-api)"
 [ "$STATUS" = "exited" ] || fail "container state is '$STATUS', expected exited"
 LOGS="$(docker compose logs auth-api 2>&1)"
-grep -q 'initialization failed' <<<"$LOGS" || fail "initialization failure not diagnosed"
+grep -q 'initialization failed during migration' <<<"$LOGS" || fail "initialization failure stage not diagnosed"
 if grep -qE 'BEGIN (RSA )?PRIVATE KEY|eyJ' <<<"$LOGS"; then fail "secret material in logs"; fi
 pass "initialization failure: container exited, never ready, no secrets in logs"
+
+docker compose down -v >/dev/null 2>&1 || true
+
+# --- Missing signing key never reports ready -------------------------------------------
+EMPTY_KEYS="$(mktemp -d "${TMPDIR:-/tmp}/auth-api-phase1-nokey.XXXXXX")"
+chmod 0755 "$EMPTY_KEYS"
+AUTH_RSA_HOST_PATH="$EMPTY_KEYS" docker compose up -d >/dev/null
+sleep 8
+if curl --fail --silent "$BASE/health/ready" >/dev/null 2>&1; then fail "reported ready without a signing key"; fi
+[ "$(docker compose ps --all --format '{{.State}}' auth-api)" = "exited" ] || fail "container did not exit without a signing key"
+LOGS="$(docker compose logs auth-api 2>&1)"
+grep -q "Jwt:PrivateKeyPath" <<<"$LOGS" || fail "missing signing key setting not diagnosed"
+if grep -qE 'BEGIN (RSA )?PRIVATE KEY|eyJ' <<<"$LOGS"; then fail "secret material in logs"; fi
+rm -rf "$EMPTY_KEYS"
+pass "missing signing key: container exited, never ready, setting named, no secrets in logs"
 
 echo "Phase 1 acceptance: ALL PASS"

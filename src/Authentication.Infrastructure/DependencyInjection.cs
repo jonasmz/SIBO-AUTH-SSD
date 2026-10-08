@@ -87,15 +87,13 @@ public static class DependencyInjection
 
     private static void Validate(JwtOptions jwtOptions, SqliteOptions sqliteOptions)
     {
-        if (string.IsNullOrWhiteSpace(sqliteOptions.ConnectionString) ||
-            string.IsNullOrWhiteSpace(jwtOptions.Issuer) ||
-            string.IsNullOrWhiteSpace(jwtOptions.Audience) ||
-            jwtOptions.AccessTokenLifetimeMinutes <= 0 ||
-            string.IsNullOrWhiteSpace(jwtOptions.PrivateKeyPath) ||
-            !File.Exists(jwtOptions.PrivateKeyPath))
-        {
-            throw new InvalidOperationException("Required Authentication API configuration is invalid.");
-        }
+        Require(!string.IsNullOrWhiteSpace(sqliteOptions.ConnectionString), $"{SqliteOptions.SectionName}:ConnectionString");
+        Require(!string.IsNullOrWhiteSpace(jwtOptions.Issuer), $"{JwtOptions.SectionName}:Issuer");
+        Require(!string.IsNullOrWhiteSpace(jwtOptions.Audience), $"{JwtOptions.SectionName}:Audience");
+        Require(jwtOptions.AccessTokenLifetimeMinutes > 0, $"{JwtOptions.SectionName}:AccessTokenLifetimeMinutes");
+
+        var keySetting = $"{JwtOptions.SectionName}:PrivateKeyPath";
+        Require(!string.IsNullOrWhiteSpace(jwtOptions.PrivateKeyPath), keySetting);
 
         try
         {
@@ -105,13 +103,19 @@ public static class DependencyInjection
                 FileAccess.Read,
                 FileShare.Read);
         }
-        catch (IOException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            throw new InvalidOperationException("Required Authentication API configuration is invalid.");
+            // Name the setting only; the path and the underlying message are never reported.
+            throw new InvalidOperationException(
+                $"Required configuration '{keySetting}' does not reference a readable private key file.");
         }
-        catch (UnauthorizedAccessException)
+    }
+
+    private static void Require(bool isValid, string setting)
+    {
+        if (!isValid)
         {
-            throw new InvalidOperationException("Required Authentication API configuration is invalid.");
+            throw new InvalidOperationException($"Required configuration '{setting}' is missing or invalid.");
         }
     }
 }

@@ -70,7 +70,7 @@ public sealed class JwtAccessTokenIssuer : IAccessTokenIssuer, IDisposable
             or UnauthorizedAccessException)
         {
             rsa.Dispose();
-            throw new InvalidOperationException("The JWT signing key could not be loaded.");
+            throw new InvalidOperationException($"The signing key referenced by '{JwtOptions.SectionName}:PrivateKeyPath' could not be loaded as an RSA private key.");
         }
     }
 }
