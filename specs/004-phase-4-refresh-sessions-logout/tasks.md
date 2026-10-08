@@ -120,13 +120,13 @@ coordinate two requests for one current cookie and prove at most one succeeds.
 
 ### Tests for User Story 3
 
-- [ ] T029 [P] [US3] Add real-SQLite integration coverage that replaying a consumed credential returns generic 401, records a replay event without secrets, and prevents its replacement from refreshing in `tests/Authentication.IntegrationTests/Scenarios/RefreshReplayDetectionTests.cs`.
-- [ ] T030 [P] [US3] Add coordinated concurrent HTTP refresh coverage proving two requests using one credential yield at most one 200 and no independent valid continuation in `tests/Authentication.IntegrationTests/Scenarios/RefreshConcurrencyTests.cs`.
+- [X] T029 [P] [US3] Add real-SQLite integration coverage that replaying a consumed credential returns generic 401, records a replay event without secrets, and prevents its replacement from refreshing in `tests/Authentication.IntegrationTests/Scenarios/RefreshReplayDetectionTests.cs`.
+- [X] T030 [P] [US3] Add coordinated concurrent HTTP refresh coverage proving two requests using one credential yield at most one 200 and no independent valid continuation in `tests/Authentication.IntegrationTests/Scenarios/RefreshConcurrencyTests.cs`.
 
 ### Implementation for User Story 3
 
-- [ ] T031 [US3] Extend serialized refresh handling so a consumed credential presentation stamps the owning family with the irreversible `Replay` reason before returning the generic invalid-refresh outcome in `src/Authentication.Infrastructure/Sessions/RenewableSessionStore.cs`.
-- [ ] T032 [US3] Add structured replay-detection logging with UTC time, family/user identifiers, and correlation context while excluding cookies, raw tokens, hashes, access tokens, keys, and configuration secrets in `src/Authentication.Infrastructure/Sessions/RenewableSessionStore.cs`.
+- [X] T031 [US3] Extend serialized refresh handling so a consumed credential presentation stamps the owning family with the irreversible `Replay` reason before returning the generic invalid-refresh outcome in `src/Authentication.Infrastructure/Sessions/RenewableSessionStore.cs`.
+- [X] T032 [US3] Add structured replay-detection logging with UTC time, family/user identifiers, and correlation context while excluding cookies, raw tokens, hashes, access tokens, keys, and configuration secrets in `src/Authentication.Infrastructure/Sessions/RenewableSessionStore.cs`.
 
 **Checkpoint**: Replay containment and one-consumer concurrency semantics are observable and
 verified with real SQLite transactions.

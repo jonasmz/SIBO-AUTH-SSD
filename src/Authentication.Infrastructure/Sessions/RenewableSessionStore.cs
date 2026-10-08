@@ -5,16 +5,19 @@ using Authentication.Infrastructure.Identity;
 using Authentication.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System.Data;
+using System.Diagnostics;
 
 namespace Authentication.Infrastructure.Sessions;
 
-public sealed class RenewableSessionStore(
+public sealed partial class RenewableSessionStore(
     AuthenticationDbContext dbContext,
     RefreshCredentialProtector protector,
     TimeProvider timeProvider,
     Microsoft.Extensions.Options.IOptions<RefreshSessionOptions> options,
-    UserManager<ApplicationUser> userManager) : IRenewableSessionStore, IRefreshSessionRotation
+    UserManager<ApplicationUser> userManager,
+    ILogger<RenewableSessionStore> logger) : IRenewableSessionStore, IRefreshSessionRotation
 {
     public async Task<IssuedRefreshSession> IssueAsync(string userId, CancellationToken cancellationToken)
     {
@@ -47,7 +50,27 @@ public sealed class RenewableSessionStore(
 
         var family = await dbContext.RenewableSessionFamilies
             .SingleOrDefaultAsync(candidate => candidate.Id == credential.FamilyId, cancellationToken);
-        if (family is null || !family.IsActive(command.ConsumedAtUtc) || credential.ConsumedAtUtc is not null || credential.RevokedAtUtc is not null || credential.ExpiresAtUtc <= command.ConsumedAtUtc)
+        if (family is null)
+        {
+            return RefreshSessionRotationResult.Invalid;
+        }
+
+        if (credential.ConsumedAtUtc is not null)
+        {
+            family.Revoke(command.ConsumedAtUtc, SessionRevocationReason.Replay);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            LogReplay(
+                logger,
+                family.Id,
+                family.UserId,
+                command.ConsumedAtUtc,
+                Activity.Current?.TraceId.ToString(),
+                Activity.Current?.SpanId.ToString());
+            return RefreshSessionRotationResult.Invalid;
+        }
+
+        if (!family.IsActive(command.ConsumedAtUtc) || credential.RevokedAtUtc is not null || credential.ExpiresAtUtc <= command.ConsumedAtUtc)
         {
             return RefreshSessionRotationResult.Invalid;
         }
@@ -71,4 +94,7 @@ public sealed class RenewableSessionStore(
         var roles = await userManager.GetRolesAsync(user);
         return new RefreshSessionRotationResult(new AuthenticatedIdentity(user.Id, user.Email ?? string.Empty, [.. roles]), family.ExpiresAtUtc);
     }
+
+    [LoggerMessage(LogLevel.Warning, "Refresh credential replay detected for session family {FamilyId}, user {UserId}, at {OccurredAtUtc}; trace {TraceId}, span {SpanId}.")]
+    private static partial void LogReplay(ILogger logger, string familyId, string userId, DateTimeOffset occurredAtUtc, string? traceId, string? spanId);
 }
