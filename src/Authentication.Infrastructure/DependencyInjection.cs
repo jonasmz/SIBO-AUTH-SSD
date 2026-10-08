@@ -114,8 +114,8 @@ public static class DependencyInjection
         Require(!string.IsNullOrWhiteSpace(jwtOptions.Audience), $"{JwtOptions.SectionName}:Audience");
         Require(jwtOptions.AccessTokenLifetimeMinutes > 0, $"{JwtOptions.SectionName}:AccessTokenLifetimeMinutes");
         Require(jwtOptions.ClockSkewSeconds is >= 0 and <= 60, $"{JwtOptions.SectionName}:ClockSkewSeconds");
-        Require(refreshOptions.LifetimeDays > 0 && refreshOptions.LifetimeDays <= int.MaxValue / 2, $"{RefreshSessionOptions.SectionName}:LifetimeDays");
-        Require(Uri.TryCreate(refreshOptions.FrontendOrigin, UriKind.Absolute, out var origin) && !string.IsNullOrEmpty(origin.Host), "Security:FrontendOrigin");
+        Require(RefreshSessionOptions.HasValidLifetime(refreshOptions.LifetimeDays), $"{RefreshSessionOptions.SectionName}:LifetimeDays");
+        Require(RefreshSessionOptions.HasValidFrontendOrigin(refreshOptions.FrontendOrigin), "Security:FrontendOrigin");
 
         var keySetting = $"{JwtOptions.SectionName}:PrivateKeyPath";
         Require(!string.IsNullOrWhiteSpace(jwtOptions.PrivateKeyPath), keySetting);

@@ -25,6 +25,14 @@ namespace Authentication.Infrastructure.Persistence.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_RenewableSessionFamilies", x => x.Id);
+                    table.CheckConstraint("CK_RenewableSessionFamilies_Expiry", "ExpiresAtUtc > CreatedAtUtc");
+                    table.CheckConstraint("CK_RenewableSessionFamilies_Revocation", "(RevokedAtUtc IS NULL AND RevocationReason IS NULL) OR (RevokedAtUtc IS NOT NULL AND RevocationReason IS NOT NULL)");
+                    table.ForeignKey(
+                        name: "FK_RenewableSessionFamilies_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -43,6 +51,9 @@ namespace Authentication.Infrastructure.Persistence.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_RefreshCredentials", x => x.Id);
+                    table.CheckConstraint("CK_RefreshCredentials_Expiry", "ExpiresAtUtc > CreatedAtUtc");
+                    table.CheckConstraint("CK_RefreshCredentials_HashLength", "length(TokenHash) = 32");
+                    table.CheckConstraint("CK_RefreshCredentials_Replacement", "ReplacedByTokenId IS NULL OR ConsumedAtUtc IS NOT NULL");
                     table.ForeignKey(
                         name: "FK_RefreshCredentials_RefreshCredentials_ReplacedByTokenId",
                         column: x => x.ReplacedByTokenId,
@@ -77,7 +88,7 @@ namespace Authentication.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_RenewableSessionFamilies_UserId_RevokedAtUtc",
                 table: "RenewableSessionFamilies",
-                columns: new[] { "UserId", "RevokedAtUtc" });
+                columns: ["UserId", "RevokedAtUtc"]);
         }
 
         /// <inheritdoc />

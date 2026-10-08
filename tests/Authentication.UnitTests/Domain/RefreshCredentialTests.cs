@@ -12,5 +12,7 @@ public sealed class RefreshCredentialTests
         var credential = new RefreshCredential("credential", "family", new byte[32], now, now.AddDays(7));
         Assert.True(credential.Consume(now, "replacement"));
         Assert.False(credential.Consume(now, "another"));
+        Assert.Equal("replacement", credential.ReplacedByTokenId);
+        Assert.Equal(now, credential.ConsumedAtUtc);
     }
 }

@@ -56,7 +56,14 @@ namespace Authentication.Infrastructure.Persistence.Migrations
                     b.HasIndex("TokenHash")
                         .IsUnique();
 
-                    b.ToTable("RefreshCredentials");
+                    b.ToTable("RefreshCredentials", t =>
+                        {
+                            t.HasCheckConstraint("CK_RefreshCredentials_Expiry", "ExpiresAtUtc > CreatedAtUtc");
+
+                            t.HasCheckConstraint("CK_RefreshCredentials_HashLength", "length(TokenHash) = 32");
+
+                            t.HasCheckConstraint("CK_RefreshCredentials_Replacement", "ReplacedByTokenId IS NULL OR ConsumedAtUtc IS NOT NULL");
+                        });
                 });
 
             modelBuilder.Entity("Authentication.Domain.Sessions.RenewableSessionFamily", b =>
@@ -84,7 +91,12 @@ namespace Authentication.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("UserId", "RevokedAtUtc");
 
-                    b.ToTable("RenewableSessionFamilies");
+                    b.ToTable("RenewableSessionFamilies", t =>
+                        {
+                            t.HasCheckConstraint("CK_RenewableSessionFamilies_Expiry", "ExpiresAtUtc > CreatedAtUtc");
+
+                            t.HasCheckConstraint("CK_RenewableSessionFamilies_Revocation", "(RevokedAtUtc IS NULL AND RevocationReason IS NULL) OR (RevokedAtUtc IS NOT NULL AND RevocationReason IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("Authentication.Infrastructure.Identity.ApplicationUser", b =>
@@ -295,6 +307,15 @@ namespace Authentication.Infrastructure.Persistence.Migrations
                         .WithOne()
                         .HasForeignKey("Authentication.Domain.Sessions.RefreshCredential", "ReplacedByTokenId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Authentication.Domain.Sessions.RenewableSessionFamily", b =>
+                {
+                    b.HasOne("Authentication.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

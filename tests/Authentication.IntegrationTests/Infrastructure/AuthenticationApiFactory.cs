@@ -8,6 +8,7 @@ namespace Authentication.IntegrationTests.Infrastructure;
 
 public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
 {
+    public const string FrontendOrigin = "https://frontend.test";
     private readonly Phase1TestResources _resources;
     private readonly bool _ownsResources;
     private readonly Dictionary<string, string?> _originalEnvironment = new();
@@ -18,7 +19,9 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
         string? connectionStringOverride = null,
         TimeProvider? timeProvider = null,
         int accessTokenLifetimeMinutes = 15,
-        Phase1TestResources? sharedResources = null)
+        Phase1TestResources? sharedResources = null,
+        int refreshSessionLifetimeDays = 7,
+        string? frontendOrigin = FrontendOrigin)
     {
         _ownsResources = sharedResources is null;
         _resources = sharedResources ?? new Phase1TestResources();
@@ -29,11 +32,23 @@ public sealed class AuthenticationApiFactory : WebApplicationFactory<Program>
         SetEnvironmentVariable("Jwt__AccessTokenLifetimeMinutes", accessTokenLifetimeMinutes.ToString(System.Globalization.CultureInfo.InvariantCulture));
         SetEnvironmentVariable("Jwt__PrivateKeyPath", _resources.PrivateKeyPath);
         SetEnvironmentVariable("Jwt__ClockSkewSeconds", "30");
-        SetEnvironmentVariable("RefreshSession__LifetimeDays", "7");
-        SetEnvironmentVariable("Security__FrontendOrigin", "https://frontend.test");
+        SetEnvironmentVariable("RefreshSession__LifetimeDays", refreshSessionLifetimeDays.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        SetEnvironmentVariable("Security__FrontendOrigin", frontendOrigin ?? string.Empty);
     }
 
     public Phase1TestResources Resources => _resources;
+
+    public static HttpRequestMessage CreateBrowserRequest(HttpMethod method, string path, string? refreshCredential = null)
+    {
+        var request = new HttpRequestMessage(method, path);
+        request.Headers.Add("Origin", FrontendOrigin);
+        if (refreshCredential is not null)
+        {
+            request.Headers.Add("Cookie", $"auth_refresh={refreshCredential}");
+        }
+
+        return request;
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {

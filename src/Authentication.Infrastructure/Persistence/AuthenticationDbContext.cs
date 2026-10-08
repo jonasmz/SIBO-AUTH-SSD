@@ -24,7 +24,13 @@ public sealed class AuthenticationDbContext(DbContextOptions<AuthenticationDbCon
         {
             entity.HasKey(family => family.Id);
             entity.HasIndex(family => new { family.UserId, family.RevokedAtUtc });
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(family => family.UserId).OnDelete(DeleteBehavior.Restrict);
             entity.HasMany<RefreshCredential>().WithOne().HasForeignKey(credential => credential.FamilyId).OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable(table =>
+            {
+                table.HasCheckConstraint("CK_RenewableSessionFamilies_Expiry", "ExpiresAtUtc > CreatedAtUtc");
+                table.HasCheckConstraint("CK_RenewableSessionFamilies_Revocation", "(RevokedAtUtc IS NULL AND RevocationReason IS NULL) OR (RevokedAtUtc IS NOT NULL AND RevocationReason IS NOT NULL)");
+            });
         });
         builder.Entity<RefreshCredential>(entity =>
         {
@@ -33,6 +39,12 @@ public sealed class AuthenticationDbContext(DbContextOptions<AuthenticationDbCon
             entity.HasIndex(credential => credential.TokenHash).IsUnique();
             entity.HasIndex(credential => credential.FamilyId);
             entity.HasOne<RefreshCredential>().WithOne().HasForeignKey<RefreshCredential>(credential => credential.ReplacedByTokenId).OnDelete(DeleteBehavior.Restrict);
+            entity.ToTable(table =>
+            {
+                table.HasCheckConstraint("CK_RefreshCredentials_HashLength", "length(TokenHash) = 32");
+                table.HasCheckConstraint("CK_RefreshCredentials_Expiry", "ExpiresAtUtc > CreatedAtUtc");
+                table.HasCheckConstraint("CK_RefreshCredentials_Replacement", "ReplacedByTokenId IS NULL OR ConsumedAtUtc IS NOT NULL");
+            });
         });
     }
 }

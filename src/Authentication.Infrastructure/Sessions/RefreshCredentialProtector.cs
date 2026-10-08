@@ -16,11 +16,12 @@ public sealed class RefreshCredentialProtector : IDisposable
     public static bool TryHash(string rawCredential, out byte[] tokenHash)
     {
         tokenHash = Array.Empty<byte>();
-        if (string.IsNullOrWhiteSpace(rawCredential) || rawCredential.Length != 43) return false;
+        if (string.IsNullOrWhiteSpace(rawCredential) || rawCredential.Length != 43 ||
+            rawCredential.Any(character => !(char.IsAsciiLetterOrDigit(character) || character is '-' or '_'))) return false;
         try
         {
             var bytes = Base64UrlDecode(rawCredential);
-            if (bytes.Length != 32) return false;
+            if (bytes.Length != 32 || !string.Equals(Base64UrlEncode(bytes), rawCredential, StringComparison.Ordinal)) return false;
             tokenHash = SHA256.HashData(bytes);
             return true;
         }
