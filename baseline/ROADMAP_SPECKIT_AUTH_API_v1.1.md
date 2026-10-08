@@ -223,7 +223,7 @@ Una fase sólo podrá marcarse `[x]` cuando se hayan cumplido todos sus criterio
 
 | Fase | Capacidad | Estado | Dependencia | Gate |
 |---|---|---|---|---|
-| 1 | Bootstrap + Identity + Admin + Login + JWT | `[ ]` | Ninguna | `G1` |
+| 1 | Bootstrap + Identity + Admin + Login + JWT | `[x]` | Ninguna | `G1` |
 | 2 | Validación JWT en APIs consumidoras | `[ ]` | Phase 1 | `G2` |
 | 3 | Administración de usuarios y roles | `[ ]` | Phase 1-2 | `G3` |
 | 4 | Refresh tokens + sesiones + logout | `[ ]` | Phase 1-3 | `G4` |
@@ -454,18 +454,18 @@ No implementar:
 
 Phase 1 podrá marcarse completa cuando:
 
-- [ ] `docker compose up` permite iniciar Auth API desde almacenamiento vacío.
-- [ ] No existe etapa externa de migración.
-- [ ] Admin inicial existe.
-- [ ] Login funciona.
-- [ ] Se obtiene JWT RS256 válido.
-- [ ] Build PASS.
-- [ ] Tests PASS.
-- [ ] Restart PASS.
-- [ ] Persistencia SQLite configurada fuera del ciclo de vida del proyecto Compose.
-- [ ] Clave RSA persistente configurada fuera del ciclo de vida del proyecto Compose.
-- [ ] Checklist actualizado.
-- [ ] Commit de cierre creado.
+- [x] `docker compose up` permite iniciar Auth API desde almacenamiento vacío.
+- [x] No existe etapa externa de migración.
+- [x] Admin inicial existe.
+- [x] Login funciona.
+- [x] Se obtiene JWT RS256 válido.
+- [x] Build PASS.
+- [x] Tests PASS.
+- [x] Restart PASS.
+- [x] Persistencia SQLite configurada fuera del ciclo de vida del proyecto Compose.
+- [x] Clave RSA persistente configurada fuera del ciclo de vida del proyecto Compose.
+- [x] Checklist actualizado.
+- [x] Commit de cierre creado.
 
 ---
 
@@ -1467,7 +1467,7 @@ Actualizar esta sección al finalizar cada sesión relevante.
 
 | Fecha | Fase | Estado | Cambio principal | Tests | Commit | Observaciones |
 |---|---|---|---|---|---|---|
-| — | Phase 1 | Pending | — | — | — | — |
+| 2026-10-07 | Phase 1 | Complete — G1 approved | Bootstrap, Identity, admin inicial, login por email, JWT RS256, health live/ready y persistencia SQLite/RSA fuera del ciclo de vida de Compose | Build 0 warnings; 19/19 tests; `tests/acceptance/phase-1.sh` ALL PASS | Commit de cierre `[Phase 1] Close Gate G1` | Aprobación explícita de G1 por el responsable del proyecto el 2026-10-07; evidencia en `docs/phase-1-operations.md`; reemplazo de la contraseña `admin` pendiente de Phase 5 |
 | — | Phase 2 | Pending | — | — | — | — |
 | — | Phase 3 | Pending | — | — | — | — |
 | — | Phase 4 | Pending | — | — | — | — |
@@ -1651,9 +1651,10 @@ antes de comenzar la siguiente.
 Roadmap defined: YES
 SRS baseline: v1.1
 SRS available: YES
-Implementation started: NO
-Current phase: Phase 1
-Current gate: G1
+Implementation started: YES
+Phase 1: COMPLETE (Gate G1 approved 2026-10-07)
+Current phase: Phase 2
+Current gate: G2
 ```
 
 ## Próxima acción
@@ -1661,8 +1662,8 @@ Current gate: G1
 Preparar la especificación Spec-Kit correspondiente a:
 
 ```text
-Phase 1
-Bootstrap + Identity + Admin + Login + JWT
+Phase 2
+Validación JWT en APIs consumidoras
 ```
 
 asegurando que `spec.md`, `plan.md` y `tasks.md` no incorporen refresh tokens, administración de usuarios, recuperación de contraseña ni otras capacidades pertenecientes a fases posteriores.

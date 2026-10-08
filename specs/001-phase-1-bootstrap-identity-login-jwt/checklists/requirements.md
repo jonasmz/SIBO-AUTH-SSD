@@ -40,3 +40,26 @@
 - Gate G1 closure is a post-implementation roadmap gate, not a specification-quality criterion.
   Its build, verification, governance, approval, and closing-commit evidence are intentionally
   tracked outside this checklist and cannot be marked complete during specification review.
+
+## Gate G1 Closure
+
+Closure recorded on 2026-10-07 after implementation tasks T001-T034, T036, and T037 were
+completed and verified. Evidence: `docs/phase-1-operations.md` (Gate G1 verification evidence),
+`tests/acceptance/phase-1.sh`, and the automated suite under `tests/`.
+
+- [x] `docker compose up` starts Auth API from empty storage (acceptance script, empty-storage startup)
+- [x] No external migration stage (`compose.yml` contains only `auth-api`; no `dotnet ef`)
+- [x] Initial administrator exists (`BootstrapAndHealthTests`)
+- [x] Login works (`LoginAndJwtTests`, acceptance login)
+- [x] Valid RS256 JWT is issued (`LoginAndJwtTests`, signature verified with the public key)
+- [x] Build PASS (`dotnet build --no-incremental`: 0 warnings, 0 errors)
+- [x] Tests PASS (19/19, 0 skipped)
+- [x] Restart PASS (`BootstrapLifecycleTests`, acceptance restart)
+- [x] SQLite persistence outside the Compose project lifecycle (bind mount; survives `down -v`)
+- [x] RSA key persistence outside the Compose project lifecycle (read-only bind mount; survives `down -v`)
+- [x] Checklist updated (this section)
+- [x] Gate G1 explicitly approved by the project owner on 2026-10-07
+- [x] Identifiable Phase 1 closing commit created (`[Phase 1] Close Gate G1`)
+
+No architectural or roadmap-impacting decision occurred during Phase 1, so no new decision-log
+entry was recorded.
