@@ -5,5 +5,6 @@ public enum SessionRevocationReason
     Replay,
     Logout,
     UserDisabled,
-    Administrator
+    Administrator,
+    PasswordChanged
 }

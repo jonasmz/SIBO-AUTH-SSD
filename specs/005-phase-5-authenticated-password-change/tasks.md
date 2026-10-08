@@ -32,7 +32,7 @@ administrator flow with no administrator-specific logic.
 **Purpose**: Make the Phase 5 scenarios expressible on the existing test host without new
 infrastructure.
 
-- [ ] T001 Extend reusable test configuration in `tests/Authentication.IntegrationTests/Infrastructure/AuthenticationApiFactory.cs` only as the Phase 5 scenarios need: an override of the externally configured Identity password policy (for example `Identity__Password__RequiredLength`) and capture of the host's log output for secret scanning; reuse the existing cookie/origin helpers and add no package.
+- [X] T001 Extend reusable test configuration in `tests/Authentication.IntegrationTests/Infrastructure/AuthenticationApiFactory.cs` only as the Phase 5 scenarios need: an override of the externally configured Identity password policy (for example `Identity__Password__RequiredLength`) and capture of the host's log output for secret scanning; reuse the existing cookie/origin helpers and add no package.
 
 ---
 
@@ -42,9 +42,9 @@ infrastructure.
 
 **⚠️ CRITICAL**: Complete this phase before implementing any user story.
 
-- [ ] T002 Append `PasswordChanged = 4` to `SessionRevocationReason` in `src/Authentication.Domain/Sessions/SessionRevocationReason.cs`, keeping `Replay = 0`, `Logout = 1`, `UserDisabled = 2`, `Administrator = 3` unchanged; no other Domain change.
-- [ ] T003 [P] Add the `Passwords` application slice under `src/Authentication.Application/Features/Passwords/`, one top-level type per matching file: `IPasswordChange.cs` (`Task<ChangePasswordOutcome> ChangeAsync(ChangePasswordCommand, CancellationToken)`), `ChangePasswordCommand.cs` (`UserId`, `CurrentPassword`, `NewPassword`, optional `PresentedRefreshTokenHash` as `byte[]?`), and `ChangePasswordOutcome.cs` (`Changed`, `InvalidCurrentPassword`, `InvalidNewPassword`, `Invalid`); no Identity, HTTP, or EF types.
-- [ ] T004 Verify Phase 5 needs no schema change by running `dotnet ef migrations has-pending-model-changes --project src/Authentication.Infrastructure --startup-project src/Authentication.Api` after T002 and confirming it reports none; do not add a migration.
+- [X] T002 Append `PasswordChanged = 4` to `SessionRevocationReason` in `src/Authentication.Domain/Sessions/SessionRevocationReason.cs`, keeping `Replay = 0`, `Logout = 1`, `UserDisabled = 2`, `Administrator = 3` unchanged; no other Domain change.
+- [X] T003 [P] Add the `Passwords` application slice under `src/Authentication.Application/Features/Passwords/`, one top-level type per matching file: `IPasswordChange.cs` (`Task<ChangePasswordOutcome> ChangeAsync(ChangePasswordCommand, CancellationToken)`), `ChangePasswordCommand.cs` (`UserId`, `CurrentPassword`, `NewPassword`, optional `PresentedRefreshTokenHash` as `byte[]?`), and `ChangePasswordOutcome.cs` (`Changed`, `InvalidCurrentPassword`, `InvalidNewPassword`, `Invalid`); no Identity, HTTP, or EF types.
+- [X] T004 Verify Phase 5 needs no schema change by running `dotnet ef migrations has-pending-model-changes --project src/Authentication.Infrastructure --startup-project src/Authentication.Api` after T002 and confirming it reports none; do not add a migration.
 
 **Checkpoint**: The Domain/Application contract exists, and the model proves no persistence change is required.
 
