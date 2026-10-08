@@ -1,0 +1,55 @@
+# Quickstart: Phase 8 Validation
+
+## Prerequisites
+
+.NET 10 SDK (`global.json`), Docker with Compose v2, `curl`, `jq`, `openssl`, `sqlite3` (≥ 3.46.1)
+on the host.
+
+## Automated suite
+
+```bash
+dotnet build Authentication.slnx --no-incremental -warnaserror
+dotnet test
+```
+
+| Scenario | Proves |
+|---|---|
+| `PersistentFileLoggerProviderTests` (unit) | one line per event with UTC, level, category, event id, trace/span; escaped newlines; exception type without message; UTC daily rotation and retention with a controlled clock; many concurrent writers → no interleaving or loss; dispose drains the queue |
+| `OperationalEventsTests` (integration) | the six new events appear for login success, user creation, enable/disable, role assign/remove; the host writes them (and the existing ones) to `auth-<utc-date>.log` in the configured directory; no secrets in that file; a missing or unwritable `Logging:File:Directory` or invalid retention stops startup naming only the setting |
+| `ApiDocumentationTests` (integration) | Development: `/openapi/v1.json` is OpenAPI 3.1 and matches [contracts/openapi-coverage.md](contracts/openapi-coverage.md) (paths, methods, statuses, Bearer requirements); `/scalar` is served read-only. Production: both return 404 |
+
+No test waits for wall-clock time. Phase 1–7 tests run unchanged.
+
+## Acceptance (disposable, production-equivalent)
+
+```bash
+tests/acceptance/phase-8.sh
+```
+
+Uses `compose.yml` plus only the Phase 6 mail-sink override; everything goes through
+`https://localhost:$FRONTEND_HTTPS_PORT` with a disposable self-signed certificate. Expected `PASS`
+lines, in order:
+
+1. Empty storage → exactly four services; schema and administrator created; `/health/ready` OK
+   (checked from inside the network).
+2. Static test page served at `/`; `/auth/health/ready`, `/auth/openapi/v1.json`, `/auth/scalar` → 404.
+3. Backend ports not reachable from the host; consumers' mounts hold no private key.
+4. E2E through the entry point: admin login and password change; user + role; user login; API A
+   and API B accept the token; refresh rotates with the cookie on `/auth/api/auth/refresh`; replay
+   refused; logout; re-login; forgot (mail sink) and reset; previous sessions revoked; disable →
+   login refused; lockout, recovery after moving the persisted lockout end; application `429` and
+   proxy `429`.
+5. Log file `auth-<utc-date>.log` exists on the host with every NFR-LOG-002 event, UTC time and
+   trace; no secret in console or file.
+6. `restart`, `up --build`, `up --force-recreate`, then `down -v` + `up -d`: database, key ring,
+   private key, logs still present; users, roles, changed admin password, sessions, and API A/B
+   validation intact.
+7. Backup during concurrent logins/refreshes → `integrity_check` ok → restore into a separate
+   disposable project → users, roles, sessions present and a known account signs in.
+8. Phase 7 acceptance (chains 6 → 1) passes.
+
+Teardown removes every disposable path and both Compose projects.
+
+## Gate G8
+
+Record evidence and the validated image digests in `docs/phase-8-operations.md` against Roadmap §14.9.
