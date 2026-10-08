@@ -227,3 +227,9 @@ Task: "Add ApiDocumentationTests in tests/Authentication.IntegrationTests/Scenar
   requests out of logs, contracts, and assertions.
 - Do not change `plan.md`, the baseline documents, any closed phase record, or any Phase 1–7 contract;
   acceptance never touches real production storage.
+
+---
+
+## Phase 8: Convergence
+
+- [ ] T038 Make the background writer in `src/Authentication.Infrastructure/Logging/PersistentFileLoggerProvider.cs` survive I/O failures instead of dying silently: catch I/O and access errors around opening, writing, flushing, and retention deletion (including `UnauthorizedAccessException`, not only `IOException`) so a transient failure (e.g. disk full) drops or retries the affected batch and the writer resumes on later events, and if the writer still terminates, record that once to the console without the exception message and make `Enqueue` stop queueing so the unbounded channel cannot grow for the process lifetime; add a case to `tests/Authentication.UnitTests/Infrastructure/PersistentFileLoggerProviderTests.cs` (no sleeps) proving logging continues or stops bounded after a write failure per FR-003, FR-004, US1/AC3 (partial)
