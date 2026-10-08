@@ -33,6 +33,25 @@ public sealed class AdministratorContinuityTests
     }
 
     [Fact]
+    public async Task RefusedDisableOfTheLastAdministratorLeavesItsRenewableFamilyUsable()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var factory = new AuthenticationApiFactory();
+        using var browser = factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { HandleCookies = false });
+        var credential = await AdministrativeSessionRevocationTests.LoginCookieAsync(
+            browser, AdminTestSupport.AdministratorEmail, AdminTestSupport.AdministratorPassword, cancellationToken);
+        using var admin = AdminTestSupport.WithBearer(
+            factory, await AdminTestSupport.AdministratorTokenAsync(browser, cancellationToken));
+
+        Assert.Equal(HttpStatusCode.Conflict, await PostStatusAsync(admin, $"/api/admin/users/{AdministratorId}/disable", cancellationToken));
+
+        var user = await GetUserAsync(admin, AdministratorId, cancellationToken);
+        Assert.True(user.Enabled);
+        using var refresh = await AdministrativeSessionRevocationTests.RefreshAsync(browser, credential, cancellationToken);
+        Assert.Equal(HttpStatusCode.OK, refresh.StatusCode);
+    }
+
+    [Fact]
     public async Task WithSeveralEnabledAdministratorsOnlyTheLastOneIsProtectedWhoeverPerformsTheOperation()
     {
         var cancellationToken = TestContext.Current.CancellationToken;

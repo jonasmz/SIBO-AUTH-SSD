@@ -169,14 +169,14 @@ prove neither refreshes; verify established 401, 403, and 404 outcomes.
 
 ### Tests for User Story 5
 
-- [ ] T039 [P] [US5] Add administrative all-family revocation integration scenarios for two independent login families and subsequent refresh rejection in `tests/Authentication.IntegrationTests/Scenarios/AdministrativeSessionRevocationTests.cs`.
-- [ ] T040 [P] [US5] Add integration assertions for administrator endpoint 401, 403, unknown-user 404, and persistence-unavailable 503 ProblemDetails conventions in `tests/Authentication.IntegrationTests/Scenarios/AdministrativeSessionRevocationAccessTests.cs`.
+- [X] T039 [P] [US5] Add administrative all-family revocation integration scenarios for two independent login families and subsequent refresh rejection in `tests/Authentication.IntegrationTests/Scenarios/AdministrativeSessionRevocationTests.cs`.
+- [X] T040 [P] [US5] Add integration assertions for administrator endpoint 401, 403, unknown-user 404, and persistence-unavailable 503 ProblemDetails conventions in `tests/Authentication.IntegrationTests/Scenarios/AdministrativeSessionRevocationAccessTests.cs`.
 
 ### Implementation for User Story 5
 
-- [ ] T041 [US5] Extend the existing user-administration application contract with all-family session revocation and existing-user outcome handling in `src/Authentication.Application/Features/Users/IUserAdministration.cs`.
-- [ ] T042 [US5] Implement atomic active-family lookup/revocation with reason `Administrator` and secret-free structured event logging with UTC event time and ambient `Activity` trace/span/correlation identifiers when available in `src/Authentication.Infrastructure/Identity/UserAdministration.cs`.
-- [ ] T043 [US5] Add the Administrator-protected `POST /api/admin/users/{id}/revoke-sessions` route preserving existing 401, 403, 404, and persistence-unavailable 503 ProblemDetails conventions in `src/Authentication.Api/Features/Users/UserAdministrationEndpoints.cs`.
+- [X] T041 [US5] Extend the existing user-administration application contract with all-family session revocation and existing-user outcome handling in `src/Authentication.Application/Features/Users/IUserAdministration.cs`.
+- [X] T042 [US5] Implement atomic active-family lookup/revocation with reason `Administrator` and secret-free structured event logging with UTC event time and ambient `Activity` trace/span/correlation identifiers when available in `src/Authentication.Infrastructure/Identity/UserAdministration.cs`.
+- [X] T043 [US5] Add the Administrator-protected `POST /api/admin/users/{id}/revoke-sessions` route preserving existing 401, 403, 404, and persistence-unavailable 503 ProblemDetails conventions in `src/Authentication.Api/Features/Users/UserAdministrationEndpoints.cs`.
 
 **Checkpoint**: US5 allows containment of all a user’s renewable families without changing consumer
 JWT validation or adding session-management interfaces.
@@ -194,13 +194,13 @@ prove old cookies remain unusable; verify a refused last-Administrator disable p
 
 ### Tests for User Story 6
 
-- [ ] T044 [P] [US6] Add integration coverage for accepted disablement revoking all families, enablement not restoring them, and a new post-enable login creating only a new family in `tests/Authentication.IntegrationTests/Scenarios/UserDisableSessionRevocationTests.cs`.
-- [ ] T045 [P] [US6] Extend last-enabled-Administrator continuity coverage to prove a refused disable leaves the account and its renewable family unchanged in `tests/Authentication.IntegrationTests/Scenarios/AdministratorContinuityTests.cs`.
+- [X] T044 [P] [US6] Add integration coverage for accepted disablement revoking all families, enablement not restoring them, and a new post-enable login creating only a new family in `tests/Authentication.IntegrationTests/Scenarios/UserDisableSessionRevocationTests.cs`.
+- [X] T045 [P] [US6] Extend last-enabled-Administrator continuity coverage to prove a refused disable leaves the account and its renewable family unchanged in `tests/Authentication.IntegrationTests/Scenarios/AdministratorContinuityTests.cs`.
 
 ### Implementation for User Story 6
 
-- [ ] T046 [US6] Extend accepted disablement so it changes `IsEnabled` and revokes every active family with reason `UserDisabled` in the same serializable operation, while enablement changes no family, in `src/Authentication.Infrastructure/Identity/UserAdministration.cs`.
-- [ ] T047 [US6] Add secret-free disablement session-revocation event logging with UTC event time and ambient `Activity` trace/span/correlation identifiers when available, only after a successful disable transition, in `src/Authentication.Infrastructure/Identity/UserAdministration.cs`.
+- [X] T046 [US6] Extend accepted disablement so it changes `IsEnabled` and revokes every active family with reason `UserDisabled` in the same serializable operation, while enablement changes no family, in `src/Authentication.Infrastructure/Identity/UserAdministration.cs`.
+- [X] T047 [US6] Add secret-free disablement session-revocation event logging with UTC event time and ambient `Activity` trace/span/correlation identifiers when available, only after a successful disable transition, in `src/Authentication.Infrastructure/Identity/UserAdministration.cs`.
 
 **Checkpoint**: US6 completes the Phase 3 disablement extension without weakening the
 last-enabled-Administrator protection.
