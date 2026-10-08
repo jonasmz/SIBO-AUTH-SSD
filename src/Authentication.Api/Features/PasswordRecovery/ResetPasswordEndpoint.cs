@@ -1,3 +1,4 @@
+using Authentication.Api.Documentation;
 using Authentication.Api.Security;
 using System.Data.Common;
 using System.Text.Json;
@@ -11,7 +12,16 @@ public static class ResetPasswordEndpoint
 {
     public static IEndpointRouteBuilder MapResetPasswordEndpoint(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/auth/reset-password", HandleAsync).AllowAnonymous().RequireRateLimiting(RateLimitingRegistration.ResetPassword);
+        endpoints.MapPost("/api/auth/reset-password", HandleAsync)
+            .AllowAnonymous()
+            .RequireRateLimiting(RateLimitingRegistration.ResetPassword)
+            .WithSummary("Replace a password with an emailed reset token")
+            .DocumentsJsonRequest<ResetPasswordRequest>()
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         return endpoints;
     }

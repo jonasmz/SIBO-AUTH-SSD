@@ -10,7 +10,13 @@ public static class LogoutEndpoint
 {
     public static IEndpointRouteBuilder MapLogoutEndpoint(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/auth/logout", HandleAsync).AllowAnonymous();
+        endpoints.MapPost("/api/auth/logout", HandleAsync)
+            .AllowAnonymous()
+            .WithSummary("End the current renewable session and clear the refresh cookie")
+            .WithDescription("Browser only: requires the configured frontend Origin; idempotent.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
         return endpoints;
     }
 

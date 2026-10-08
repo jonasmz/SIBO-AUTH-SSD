@@ -1,3 +1,4 @@
+using Authentication.Api.Documentation;
 using Authentication.Api.Features.Administration;
 using Authentication.Application.Features.Users;
 
@@ -9,16 +10,49 @@ public static class UserAdministrationEndpoints
     {
         ArgumentNullException.ThrowIfNull(group);
 
-        group.MapGet("/users", ListAsync);
-        group.MapGet("/users/{id}", GetAsync);
-        group.MapPost("/users", CreateAsync);
-        group.MapPatch("/users/{id}", UpdateAsync);
-        group.MapPut("/users/{id}/roles", ReplaceRolesAsync);
-        group.MapPost("/users/{id}/revoke-sessions", RevokeSessionsAsync);
+        group.MapGet("/users", ListAsync)
+            .WithSummary("List users")
+            .Produces<IReadOnlyList<UserView>>(StatusCodes.Status200OK);
+        group.MapGet("/users/{id}", GetAsync)
+            .WithSummary("Get one user")
+            .Produces<UserView>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+        group.MapPost("/users", CreateAsync)
+            .WithSummary("Create a user")
+            .DocumentsJsonRequest<CreateUserRequest>()
+            .Produces<UserView>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+        group.MapPatch("/users/{id}", UpdateAsync)
+            .WithSummary("Change a user's email")
+            .DocumentsJsonRequest<UpdateUserRequest>()
+            .Produces<UserView>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+        group.MapPut("/users/{id}/roles", ReplaceRolesAsync)
+            .WithSummary("Replace a user's roles")
+            .DocumentsJsonRequest<ReplaceUserRolesRequest>()
+            .Produces<UserView>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+        group.MapPost("/users/{id}/revoke-sessions", RevokeSessionsAsync)
+            .WithSummary("Revoke every renewable session of a user")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status404NotFound);
         group.MapPost("/users/{id}/enable", (string id, IUserAdministration users, CancellationToken cancellationToken) =>
-            SetEnabledAsync(id, true, users, cancellationToken));
+                SetEnabledAsync(id, true, users, cancellationToken))
+            .WithSummary("Enable a user")
+            .Produces<UserView>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
         group.MapPost("/users/{id}/disable", (string id, IUserAdministration users, CancellationToken cancellationToken) =>
-            SetEnabledAsync(id, false, users, cancellationToken));
+                SetEnabledAsync(id, false, users, cancellationToken))
+            .WithSummary("Disable a user and revoke their renewable sessions")
+            .Produces<UserView>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         return group;
     }

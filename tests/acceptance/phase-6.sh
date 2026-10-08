@@ -50,6 +50,8 @@ export MAIL_SINK_HTTP_PORT="$SINK_PORT"
 export COMPOSE_PROJECT_NAME="auth-api-phase6-acceptance"
 # The sink exists only in this override; compose.yml itself gains no service.
 export COMPOSE_FILE="compose.yml:tests/acceptance/compose.mail-sink.yml"
+# Phase 8: disposable logs, frontend inputs, and the direct-access override for the final topology.
+source "$REPO_ROOT/tests/acceptance/deployment-env.sh"
 
 ADMIN_EMAIL="admin@local.invalid"
 ADMIN_PASSWORD="admin"

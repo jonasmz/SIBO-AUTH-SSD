@@ -11,7 +11,16 @@ public static class RefreshEndpoint
 {
     public static IEndpointRouteBuilder MapRefreshEndpoint(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/auth/refresh", HandleAsync).AllowAnonymous().RequireRateLimiting(RateLimitingRegistration.Refresh);
+        endpoints.MapPost("/api/auth/refresh", HandleAsync)
+            .AllowAnonymous()
+            .RequireRateLimiting(RateLimitingRegistration.Refresh)
+            .WithSummary("Rotate the refresh cookie and issue a new access token")
+            .WithDescription("Browser only: requires the refresh cookie and the configured frontend Origin. The response body has the same shape as the login response.")
+            .Produces<Authentication.Api.Features.Login.LoginResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
         return endpoints;
     }
 

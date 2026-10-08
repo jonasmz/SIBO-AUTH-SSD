@@ -78,8 +78,13 @@ in the NFR-LOG-002 list and gain no event.
   contains `IAuthorizeData` and not `IAllowAnonymous`. Each endpoint declares `WithSummary`, its
   success type with `Produces<T>(status)` (or `Produces(204)`), and `ProducesProblem(status)` for
   every error it already returns; coverage per [contracts/openapi-coverage.md](contracts/openapi-coverage.md).
-  Request bodies are the existing record types read with `ReadFromJsonAsync`; endpoints that read
-  the body manually declare it with `Accepts<T>("application/json")`.
+  Request bodies are the existing record types read with `ReadFromJsonAsync`. Implementation finding:
+  `Accepts<T>("application/json")` adds content-type metadata that the framework enforces with `415`
+  before the endpoint runs, replacing the endpoints' own `400` problem details for non-JSON bodies (four
+  Phase 3–6 tests caught it). Endpoints therefore declare their body with a documentation-only marker
+  (`DocumentsJsonRequest<T>()`) that an operation transformer turns into the `requestBody`; routing is
+  unaffected. A schema transformer drops the records' computed get-only helpers (`IsValid`,
+  `TrimmedName`) from request schemas without changing the records.
 - **Rationale**: Official mechanism; metadata only, so behavior is unchanged (FR-006).
 - **Alternatives**: Swashbuckle/NSwag (prohibited); XML comments only (do not express status codes).
 

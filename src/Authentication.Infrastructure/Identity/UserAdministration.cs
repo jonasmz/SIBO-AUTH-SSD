@@ -80,6 +80,12 @@ public sealed partial class UserAdministration(
         }
 
         await transaction.CommitAsync(cancellationToken);
+        var now = timeProvider.GetUtcNow();
+        SecurityEvents.UserCreated(logger, id, roleNames.Count, now, TraceId(), SpanId());
+        foreach (var role in roleNames)
+        {
+            SecurityEvents.UserRoleAssigned(logger, id, role, now, TraceId(), SpanId());
+        }
 
         return await FindAsync(id, cancellationToken);
     }
@@ -126,7 +132,8 @@ public sealed partial class UserAdministration(
         }
 
         var revoked = 0;
-        if (user.IsEnabled != enabled)
+        var changed = user.IsEnabled != enabled;
+        if (changed)
         {
             if (!enabled)
             {
@@ -160,6 +167,18 @@ public sealed partial class UserAdministration(
         }
 
         await transaction.CommitAsync(cancellationToken);
+        if (changed)
+        {
+            if (enabled)
+            {
+                SecurityEvents.UserEnabled(logger, id, timeProvider.GetUtcNow(), TraceId(), SpanId());
+            }
+            else
+            {
+                SecurityEvents.UserDisabled(logger, id, timeProvider.GetUtcNow(), TraceId(), SpanId());
+            }
+        }
+
         if (revoked > 0)
         {
             LogSessionsRevoked(logger, id, revoked, nameof(SessionRevocationReason.UserDisabled), timeProvider.GetUtcNow(), Activity.Current?.TraceId.ToString(), Activity.Current?.SpanId.ToString());
@@ -255,9 +274,23 @@ public sealed partial class UserAdministration(
         }
 
         await transaction.CommitAsync(cancellationToken);
+        var committedAt = timeProvider.GetUtcNow();
+        foreach (var role in toRemove)
+        {
+            SecurityEvents.UserRoleRemoved(logger, id, role, committedAt, TraceId(), SpanId());
+        }
+
+        foreach (var role in toAdd)
+        {
+            SecurityEvents.UserRoleAssigned(logger, id, role, committedAt, TraceId(), SpanId());
+        }
 
         return await FindAsync(id, cancellationToken);
     }
+
+    private static string? TraceId() => Activity.Current?.TraceId.ToString();
+
+    private static string? SpanId() => Activity.Current?.SpanId.ToString();
 
     /// <summary>Resolves distinct existing roles after name normalization; <see langword="null"/> when any is missing.</summary>
     private async Task<List<IdentityRole<string>>?> ResolveRolesAsync(IReadOnlyList<string> requested)

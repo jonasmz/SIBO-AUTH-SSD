@@ -40,6 +40,8 @@ export AUTH_HTTP_PORT="$AUTH_PORT"
 export API_A_HTTP_PORT="$A_PORT"
 export API_B_HTTP_PORT="$B_PORT"
 export COMPOSE_PROJECT_NAME="auth-api-phase2-acceptance"
+# Phase 8: disposable logs, frontend inputs, and the direct-access override for the final topology.
+source "$REPO_ROOT/tests/acceptance/deployment-env.sh"
 
 pass() { printf 'PASS  %s\n' "$1"; }
 fail() { printf 'FAIL  %s\n' "$1" >&2; exit 1; }

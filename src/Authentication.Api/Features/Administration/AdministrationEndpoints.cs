@@ -16,7 +16,10 @@ public static class AdministrationEndpoints
 
         var group = endpoints
             .MapGroup("/api/admin")
-            .RequireAuthorization(JwtValidationRegistration.AdministratorPolicy);
+            .RequireAuthorization(JwtValidationRegistration.AdministratorPolicy)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         group.MapUserAdministrationEndpoints();
         group.MapRoleAdministrationEndpoints();

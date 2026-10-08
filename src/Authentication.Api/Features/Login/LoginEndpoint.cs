@@ -1,3 +1,4 @@
+using Authentication.Api.Documentation;
 using Authentication.Api.Security;
 using System.Data.Common;
 using System.Text.Json;
@@ -11,7 +12,17 @@ public static class LoginEndpoint
 {
     public static IEndpointRouteBuilder MapLoginEndpoint(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/auth/login", HandleAsync).AllowAnonymous().RequireRateLimiting(RateLimitingRegistration.Login);
+        endpoints.MapPost("/api/auth/login", HandleAsync)
+            .AllowAnonymous()
+            .RequireRateLimiting(RateLimitingRegistration.Login)
+            .WithSummary("Sign in with email and password")
+            .WithDescription("Returns an access token and sets the HttpOnly refresh cookie. Every credential failure (unknown, wrong password, locked, disabled) answers the same 401.")
+            .DocumentsJsonRequest<LoginRequest>()
+            .Produces<LoginResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         return endpoints;
     }

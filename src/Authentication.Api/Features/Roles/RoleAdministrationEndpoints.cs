@@ -1,3 +1,4 @@
+using Authentication.Api.Documentation;
 using Authentication.Api.Features.Administration;
 using Authentication.Application.Features.Roles;
 
@@ -9,10 +10,27 @@ public static class RoleAdministrationEndpoints
     {
         ArgumentNullException.ThrowIfNull(group);
 
-        group.MapGet("/roles", ListAsync);
-        group.MapPost("/roles", CreateAsync);
-        group.MapPatch("/roles/{id}", RenameAsync);
-        group.MapDelete("/roles/{id}", DeleteAsync);
+        group.MapGet("/roles", ListAsync)
+            .WithSummary("List roles")
+            .Produces<IReadOnlyList<RoleView>>(StatusCodes.Status200OK);
+        group.MapPost("/roles", CreateAsync)
+            .WithSummary("Create a role")
+            .DocumentsJsonRequest<RoleNameRequest>()
+            .Produces<RoleView>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+        group.MapPatch("/roles/{id}", RenameAsync)
+            .WithSummary("Rename a role")
+            .DocumentsJsonRequest<RoleNameRequest>()
+            .Produces<RoleView>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+        group.MapDelete("/roles/{id}", DeleteAsync)
+            .WithSummary("Delete a role")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         return group;
     }

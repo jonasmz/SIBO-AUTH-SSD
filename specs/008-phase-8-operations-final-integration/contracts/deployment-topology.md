@@ -61,6 +61,11 @@ location ~ ^/auth/(login|refresh|forgot-password|reset-password)$ {
 location /auth/ { proxy_pass http://auth-api:8080/api/auth/; }
 ```
 
+Implementation notes found by acceptance: `absolute_redirect off` keeps the translated `Location`
+relative (`/auth/admin/users/{id}`), as the application issues it, instead of an absolute URL built from
+Nginx's own name and listen port; exact `/api-a/api` and `/api-b/api` answer `404` instead of the
+trailing-slash redirect Nginx would otherwise issue.
+
 Headers set (overwriting any client value) on every proxied request: `Host $host`,
 `X-Forwarded-For $remote_addr`, `X-Forwarded-Proto $scheme`. `client_max_body_size 16k`.
 First layer: `limit_req_zone $binary_remote_addr` 60 r/min, burst 20, `limit_req_status 429`.

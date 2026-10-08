@@ -55,6 +55,12 @@ export REFERENCE_PROXY_HTTP_PORT="$PROXY_PORT"
 export COMPOSE_PROJECT_NAME="auth-api-phase7-acceptance"
 # The proxy exists only in this override; compose.yml itself gains no service.
 export COMPOSE_FILE="compose.yml:tests/acceptance/compose.reference-proxy.yml"
+# Phase 8 topology: this project's own internal network; the frontend gets an address that is not the
+# reference proxy's, and only the reference proxy is trusted (compose.reference-proxy.yml).
+export AUTH_INTERNAL_SUBNET="172.28.7.0/24"
+export FRONTEND_INTERNAL_ADDRESS="172.28.7.20"
+# Phase 8: disposable logs, frontend inputs, and the direct-access override for the final topology.
+source "$REPO_ROOT/tests/acceptance/deployment-env.sh"
 
 ADMIN_EMAIL="admin@local.invalid"
 ADMIN_PASSWORD="admin"
@@ -221,7 +227,8 @@ docker compose down -v >/dev/null
         AUTH_RATE_LIMIT_REFRESH_WINDOW_SECONDS AUTH_RATE_LIMIT_FORGOT_PASSWORD_PERMIT_LIMIT AUTH_RATE_LIMIT_FORGOT_PASSWORD_WINDOW_SECONDS \
         AUTH_RATE_LIMIT_RESET_PASSWORD_PERMIT_LIMIT AUTH_RATE_LIMIT_RESET_PASSWORD_WINDOW_SECONDS \
         AUTH_RATE_LIMIT_FORGOT_PASSWORD_ADDRESS_PERMIT_LIMIT AUTH_RATE_LIMIT_FORGOT_PASSWORD_ADDRESS_WINDOW_SECONDS \
-        AUTH_LOCKOUT_MAX_FAILED_ATTEMPTS AUTH_LOCKOUT_DURATION AUTH_TRUSTED_PROXIES AUTH_TRUSTED_NETWORKS
+        AUTH_LOCKOUT_MAX_FAILED_ATTEMPTS AUTH_LOCKOUT_DURATION AUTH_TRUSTED_PROXIES AUTH_TRUSTED_NETWORKS \
+        AUTH_INTERNAL_SUBNET FRONTEND_INTERNAL_ADDRESS
   "$REPO_ROOT/tests/acceptance/phase-6.sh"
 ) || fail "Phase 6 regression failed"
 pass "Phase 6 acceptance regression (includes Phases 5, 4, 3, 2 and 1)"

@@ -1,3 +1,4 @@
+using Authentication.Api.Documentation;
 using Authentication.Api.Features.Administration;
 using Authentication.Api.Features.Health;
 using Authentication.Api.Features.Login;
@@ -9,6 +10,15 @@ using Authentication.Api.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// One line per event with a UTC timestamp, suited to `docker logs`; the persistent file provider receives the
+// same events (registered with the infrastructure).
+builder.Logging.AddSimpleConsole(options =>
+{
+    options.SingleLine = true;
+    options.UseUtcTimestamp = true;
+    options.TimestampFormat = "yyyy-MM-dd'T'HH:mm:ss.fff'Z' ";
+});
+
 builder.Services.AddProblemDetails();
 builder.Services.AddAuthenticationInfrastructure(builder.Configuration);
 builder.Services.AddSingleton<RefreshCookieWriter>();
@@ -16,6 +26,7 @@ builder.Services.AddSingleton<BrowserOriginValidator>();
 builder.Services.AddTrustedForwardedHeaders(builder.Configuration);
 builder.Services.AddAuthenticationRateLimiting(builder.Configuration);
 builder.Services.AddSingleton<RecoveryAddressLimiter>();
+builder.Services.AddApiDocumentation();
 
 var app = builder.Build();
 
@@ -36,6 +47,7 @@ app.MapChangePasswordEndpoint();
 app.MapForgotPasswordEndpoint();
 app.MapResetPasswordEndpoint();
 app.MapAdministrationEndpoints();
+app.MapApiDocumentationInDevelopment();
 
 await app.RunAsync();
 

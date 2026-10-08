@@ -1,3 +1,4 @@
+using Authentication.Api.Documentation;
 using Authentication.Api.Security;
 using System.Data.Common;
 using System.Text.Json;
@@ -12,7 +13,16 @@ public static class ForgotPasswordEndpoint
 {
     public static IEndpointRouteBuilder MapForgotPasswordEndpoint(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/auth/forgot-password", HandleAsync).AllowAnonymous().RequireRateLimiting(RateLimitingRegistration.ForgotPassword);
+        endpoints.MapPost("/api/auth/forgot-password", HandleAsync)
+            .AllowAnonymous()
+            .RequireRateLimiting(RateLimitingRegistration.ForgotPassword)
+            .WithSummary("Request password-reset instructions by email")
+            .WithDescription("Answers the same 204 whether or not the account exists.")
+            .DocumentsJsonRequest<ForgotPasswordRequest>()
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         return endpoints;
     }

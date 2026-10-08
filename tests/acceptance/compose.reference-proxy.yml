@@ -2,6 +2,7 @@
 # of auth-api inside a disposable project. It is never referenced by compose.yml and adds no service to the
 # deployment topology. Used through COMPOSE_FILE by tests/acceptance/phase-7.sh.
 # Paths are relative to the first file (compose.yml), i.e. the repository root.
+# The default network and its subnet come from compose.yml; phase-7.sh sets AUTH_INTERNAL_SUBNET=172.28.7.0/24.
 services:
   reference-proxy:
     # Official image, pinned by tag and digest (nginx 1.30.5, published 2026-09-22).
@@ -22,8 +23,3 @@ services:
     environment:
       # The proxy's fixed address is the only trusted source of forwarded headers.
       ReverseProxy__TrustedProxies: "172.28.7.10"
-networks:
-  default:
-    ipam:
-      config:
-        - subnet: 172.28.7.0/24

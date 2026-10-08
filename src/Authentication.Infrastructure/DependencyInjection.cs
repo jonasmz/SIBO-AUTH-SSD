@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Authentication.Infrastructure;
@@ -72,6 +73,9 @@ public static class DependencyInjection
         services.AddSingleton(Options.Create(smtpOptions));
         services.AddSingleton(Options.Create(dataProtectionOptions));
         services.AddSingleton(Options.Create(fileLoggerOptions));
+
+        // The logger factory picks up every registered provider, so the files receive the same events as the console.
+        services.AddSingleton<ILoggerProvider, PersistentFileLoggerProvider>();
         services.AddSingleton<RefreshCredentialProtector>();
         services.AddScoped<IRenewableSessionStore, RenewableSessionStore>();
         services.AddScoped<IRefreshSessionRotation, RenewableSessionStore>();
