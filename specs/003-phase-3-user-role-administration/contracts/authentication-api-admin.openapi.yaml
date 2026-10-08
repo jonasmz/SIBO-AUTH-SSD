@@ -1,0 +1,462 @@
+openapi: 3.1.0
+info:
+  title: Authentication API — Phase 3 administration
+  version: 1.0.0-phase3
+  description: >-
+    Planning contract for the eleven Phase 3 administrative operations under /api/admin.
+    Every operation requires a valid RS256 access token issued by Authentication API, validated
+    exactly as the Phase 2 consumer APIs validate it, and the Administrator role. The Phase 1
+    contract (login, health) is unchanged and remains defined in
+    specs/001-phase-1-bootstrap-identity-login-jwt/contracts/authentication-api.openapi.yaml.
+    Request bodies reject unknown members with 400. The session-revocation endpoint of SRS §35.2
+    belongs to Phase 4 and is intentionally absent.
+security:
+  - bearer: []
+paths:
+  /api/admin/users:
+    get:
+      operationId: listUsers
+      summary: List all users (not paged), sorted by normalized email
+      responses:
+        '200':
+          description: All users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      operationId: createUser
+      summary: Create a user with an initial password, enabled state, and optional roles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created
+          headers:
+            Location:
+              description: /api/admin/users/{id} of the created user
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/admin/users/{id}:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    get:
+      operationId: getUser
+      summary: Retrieve one user
+      responses:
+        '200':
+          description: The user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      operationId: updateUser
+      summary: Update the user's email (the only modifiable attribute)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: The updated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/admin/users/{id}/roles:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    put:
+      operationId: replaceUserRoles
+      summary: Replace the user's complete role set
+      description: >-
+        The user ends with exactly the supplied roles; omitted roles are removed and an empty
+        list removes all roles. Names are matched after normalization and duplicates collapse.
+        Any nonexistent role rejects the whole request (400) with nothing applied. Removing the
+        Administrator role from the last enabled administrator is refused (409).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplaceUserRolesRequest'
+      responses:
+        '200':
+          description: The user with its new role set
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/admin/users/{id}/enable:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    post:
+      operationId: enableUser
+      summary: Enable the user (idempotent)
+      responses:
+        '200':
+          description: The user, now enabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/users/{id}/disable:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    post:
+      operationId: disableUser
+      summary: Disable the user so it cannot log in (idempotent)
+      description: >-
+        Prevents new logins only; previously issued access tokens stay valid until expiry.
+        Disabling the last enabled administrator is refused (409).
+      responses:
+        '200':
+          description: The user, now disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/admin/roles:
+    get:
+      operationId: listRoles
+      summary: List all roles, sorted by normalized name
+      responses:
+        '200':
+          description: All roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Role'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      operationId: createRole
+      summary: Create a role with a name unique after normalization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleNameRequest'
+      responses:
+        '201':
+          description: Role created
+          headers:
+            Location:
+              description: /api/admin/roles/{id} of the created role
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/admin/roles/{id}:
+    parameters:
+      - $ref: '#/components/parameters/RoleId'
+    patch:
+      operationId: renameRole
+      summary: Rename a role; assignments are kept
+      description: The Administrator role cannot be renamed (409).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleNameRequest'
+      responses:
+        '200':
+          description: The renamed role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      operationId: deleteRole
+      summary: Delete a role assigned to no user
+      description: The Administrator role and any assigned role cannot be deleted (409).
+      responses:
+        '204':
+          description: Role deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >-
+        RS256 access token from POST /api/auth/login. Issuer, audience, signature, and expiry
+        (with the configured explicit clock tolerance) are validated locally. Authorization uses
+        the token's role claims; role changes affect only tokens issued afterwards.
+  parameters:
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    RoleId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    User:
+      type: object
+      additionalProperties: false
+      required: [id, email, enabled, isLockedOut, lockoutEndUtc, roles]
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        enabled:
+          type: boolean
+        isLockedOut:
+          type: boolean
+          description: Identity lockout is currently in effect (independent of enabled)
+        lockoutEndUtc:
+          type: [string, 'null']
+          format: date-time
+          description: UTC end of the current lockout; null when not locked out
+        roles:
+          type: array
+          items:
+            type: string
+          description: Role names, sorted
+      description: >-
+        Never contains password, password hash, security stamp, concurrency stamp, tokens,
+        keys, or failed-attempt counters.
+    Role:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    CreateUserRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          description: Must satisfy the configured Identity password policy
+        enabled:
+          type: boolean
+          default: true
+        roles:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 256
+          default: []
+          description: Existing role names
+    UpdateUserRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+    ReplaceUserRolesRequest:
+      type: object
+      additionalProperties: false
+      required: [roles]
+      properties:
+        roles:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 256
+    RoleNameRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 256
+    ProblemDetails:
+      type: object
+      required: [title, status]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        traceId:
+          type: string
+  responses:
+    BadRequest:
+      description: >-
+        Malformed JSON, non-JSON content type, unknown member, missing or invalid field,
+        password-policy violation, or reference to a nonexistent role. Nothing is changed.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: about:blank
+            title: Bad Request
+            status: 400
+            detail: The request is invalid.
+    Unauthorized:
+      description: Missing, malformed, forged, expired, or otherwise invalid access token
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+            const: Bearer
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: about:blank
+            title: Unauthorized
+            status: 401
+    Forbidden:
+      description: Valid access token without the Administrator role
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: about:blank
+            title: Forbidden
+            status: 403
+    NotFound:
+      description: Unknown user or role identifier
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            detail: The user was not found.
+    Conflict:
+      description: >-
+        Duplicate normalized email or role name, or a state rule refusal (last enabled
+        administrator, Administrator role immutability, assigned-role deletion). Nothing is changed.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+          example:
+            type: about:blank
+            title: Conflict
+            status: 409
+            detail: The operation would leave no enabled administrator.
