@@ -216,6 +216,54 @@ public sealed class RateLimitingTests
         Assert.InRange(seconds.Value, 1, windowSeconds);
     }
 
+    [Fact]
+    public async Task SwitchingRateLimitingOffAppliesNoApplicationLimitAndWarnsAtStartup()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var factory = new AuthenticationApiFactory(additionalSettings: new Dictionary<string, string>
+        {
+            ["RateLimiting__Enabled"] = "false",
+            ["RateLimiting__Login__PermitLimit"] = "1",
+            ["RateLimiting__ForgotPasswordAddress__PermitLimit"] = "1"
+        });
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+
+        // Far beyond the configured permit of 1: neither the per-origin nor the per-address limit answers 429.
+        for (var i = 0; i < 5; i++)
+        {
+            Assert.Equal(HttpStatusCode.Unauthorized, (await LoginAsync(client, "192.0.2.77", cancellationToken)).StatusCode);
+            Assert.Equal(HttpStatusCode.NoContent, (await ForgotAsync(client, "192.0.2.77", "same@example.test", cancellationToken)).StatusCode);
+        }
+
+        Assert.DoesNotContain(factory.CapturedLogs, log => log.StartsWith("RateLimitApplied", StringComparison.Ordinal));
+        Assert.Contains(factory.CapturedLogs, log => log.StartsWith("RateLimitingDisabled", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task RateLimitingStaysOnByDefaultAndAnInvalidSwitchStopsStartup()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using (var factory = new AuthenticationApiFactory(additionalSettings: new Dictionary<string, string>
+        {
+            ["RateLimiting__Enabled"] = "",
+            ["RateLimiting__Login__PermitLimit"] = "1"
+        }))
+        using (var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false }))
+        {
+            Assert.Equal(HttpStatusCode.Unauthorized, (await LoginAsync(client, "192.0.2.78", cancellationToken)).StatusCode);
+            Assert.Equal(HttpStatusCode.TooManyRequests, (await LoginAsync(client, "192.0.2.78", cancellationToken)).StatusCode);
+            Assert.DoesNotContain(factory.CapturedLogs, log => log.StartsWith("RateLimitingDisabled", StringComparison.Ordinal));
+        }
+
+        using var invalid = new AuthenticationApiFactory(additionalSettings: new Dictionary<string, string>
+        {
+            ["RateLimiting__Enabled"] = "sometimes"
+        });
+        var failure = Assert.ThrowsAny<Exception>(() => invalid.CreateClient());
+        Assert.Contains("RateLimiting:Enabled", failure.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("sometimes", failure.ToString(), StringComparison.Ordinal);
+    }
+
     private static Task<HttpResponseMessage> LoginAsync(
         HttpClient client, string address, CancellationToken cancellationToken, string email = "nobody@example.test", string password = "Wr0ng-Guess!") =>
         PostJsonAsync(client, "/api/auth/login", System.Text.Json.JsonSerializer.Serialize(new { email, password }), address, cancellationToken);

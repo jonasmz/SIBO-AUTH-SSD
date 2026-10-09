@@ -4,7 +4,7 @@
 
 | Service | Image | Published ports | Mounts (host → container) | Network |
 |---|---|---|---|---|
-| `frontend` | official `nginx` stable Alpine, pinned digest | `${FRONTEND_HTTPS_PORT:-443}:443`, `${FRONTEND_HTTP_PORT:-80}:80` | `deploy/frontend/nginx.conf` → `/etc/nginx/conf.d/default.conf` (ro); `${FRONTEND_STATIC_HOST_PATH}` → `/usr/share/nginx/html` (ro); `${FRONTEND_TLS_HOST_PATH}` → `/etc/nginx/tls` (ro) | default, fixed `${FRONTEND_INTERNAL_ADDRESS}` |
+| `frontend` | official `nginx` stable Alpine, pinned digest | `${FRONTEND_HTTPS_PORT:-443}:443`, `${FRONTEND_HTTP_PORT:-80}:80` | `deploy/frontend/nginx.conf` → `/etc/nginx/conf.d/default.conf` (ro); `deploy/frontend/cloudflare-realip.conf` → `/etc/nginx/cloudflare-realip.conf` (ro); `${FRONTEND_STATIC_HOST_PATH}` → `/usr/share/nginx/html` (ro); `${FRONTEND_TLS_HOST_PATH}` → `/etc/nginx/tls` (ro) | default, fixed `${FRONTEND_INTERNAL_ADDRESS}` |
 | `auth-api` | built from `src/Authentication.Api/Dockerfile` | none | `${AUTH_SQLITE_HOST_PATH}` → `/var/lib/auth-api/data`; `${AUTH_DATAPROTECTION_HOST_PATH}` → `/var/lib/auth-api/dataprotection`; `${AUTH_RSA_HOST_PATH}` → `/var/lib/auth-api/keys` (ro); `${AUTH_LOGS_HOST_PATH}` → `/app/logs` | default |
 | `api-a`, `api-b` | built from `src/ReferenceConsumer.Api/Dockerfile` | none | `${AUTH_JWT_PUBLIC_KEY_HOST_FILE}` → `/var/lib/consumer/jwt-public.pem` (ro, single file) | default |
 

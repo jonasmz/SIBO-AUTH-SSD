@@ -31,6 +31,7 @@ builder.Services.AddApiDocumentation();
 var app = builder.Build();
 
 // First, so every later middleware, limit, and log sees the effective client address, never a forged one.
+app.WarnIfRateLimitingDisabled();
 app.UseForwardedHeaders();
 app.UseExceptionHandler();
 app.UseRateLimiter();

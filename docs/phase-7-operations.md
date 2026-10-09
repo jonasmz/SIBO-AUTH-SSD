@@ -14,6 +14,7 @@ Every setting has a default; blank keeps it. Invalid values terminate startup na
 |---|---|---|
 | `AUTH_LOCKOUT_MAX_FAILED_ATTEMPTS` | `Identity:Lockout:MaxFailedAccessAttempts` | `5` |
 | `AUTH_LOCKOUT_DURATION` | `Identity:Lockout:DefaultLockoutTimeSpan` (`hh:mm:ss`) | `00:15:00` |
+| `AUTH_RATE_LIMIT_ENABLED` | `RateLimiting:Enabled` (`true`/`false`) | `true` |
 | `AUTH_RATE_LIMIT_LOGIN_PERMIT_LIMIT` / `_WINDOW_SECONDS` | `RateLimiting:Login:*` | 10 per 60 s |
 | `AUTH_RATE_LIMIT_REFRESH_PERMIT_LIMIT` / `_WINDOW_SECONDS` | `RateLimiting:Refresh:*` | 30 per 60 s |
 | `AUTH_RATE_LIMIT_FORGOT_PASSWORD_PERMIT_LIMIT` / `_WINDOW_SECONDS` | `RateLimiting:ForgotPassword:*` | 5 per 900 s |
@@ -28,6 +29,12 @@ small internal user base behind one proxy; they are not normative. Review them f
 them with the variables above. Limits are fixed windows per effective client address (and per normalized
 address for the recovery limit), held in **process memory**: a restart resets them and several instances would
 limit separately (the architecture runs one).
+
+**Switching the limits off.** `AUTH_RATE_LIMIT_ENABLED=false` removes every application request limit (the five
+policies, including the per-address recovery limit) and logs a `RateLimitingDisabled` warning at startup. It is
+meant for tests and staging only. It does not affect Identity lockout or the Nginx first layer
+(`deploy/frontend/nginx.conf`, 60 requests/minute per client address), and a value other than `true`/`false` stops
+startup naming `RateLimiting:Enabled`.
 
 ## Lockout
 

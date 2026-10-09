@@ -308,77 +308,77 @@ Esta fase establece la plataforma mínima sobre la cual crecerán todas las dem�
 
 ### Infraestructura de aplicación
 
-- [ ] Crear solución .NET.
-- [ ] Crear proyecto Authentication API.
-- [ ] Configurar ASP.NET Core.
-- [ ] Configurar Entity Framework Core.
-- [ ] Configurar SQLite.
-- [ ] Configurar ASP.NET Core Identity.
-- [ ] Configurar Dockerfile.
-- [ ] Configurar integración mínima con Docker Compose.
-- [ ] Configurar almacenamiento persistente SQLite independiente del ciclo de vida del proyecto Compose.
-- [ ] Utilizar como referencia un bind mount hacia un directorio explícito del host para SQLite.
-- [ ] Permitir volumen `external` como alternativa administrada fuera del proyecto Compose.
-- [ ] Documentar la ubicación persistente de SQLite.
+- [x] Crear solución .NET.
+- [x] Crear proyecto Authentication API.
+- [x] Configurar ASP.NET Core.
+- [x] Configurar Entity Framework Core.
+- [x] Configurar SQLite.
+- [x] Configurar ASP.NET Core Identity.
+- [x] Configurar Dockerfile.
+- [x] Configurar integración mínima con Docker Compose.
+- [x] Configurar almacenamiento persistente SQLite independiente del ciclo de vida del proyecto Compose.
+- [x] Utilizar como referencia un bind mount hacia un directorio explícito del host para SQLite.
+- [x] Permitir volumen `external` como alternativa administrada fuera del proyecto Compose.
+- [x] Documentar la ubicación persistente de SQLite.
 
 ### Inicialización de base
 
-- [ ] Authentication API prepara automáticamente la base durante startup.
-- [ ] No existe migration container.
-- [ ] Compose no ejecuta `dotnet ef database update`.
-- [ ] No existe script externo de bootstrap.
-- [ ] Aplicar migraciones embebidas pendientes desde la aplicación.
-- [ ] Startup es idempotente.
-- [ ] Fallo de migración impide readiness.
+- [x] Authentication API prepara automáticamente la base durante startup.
+- [x] No existe migration container.
+- [x] Compose no ejecuta `dotnet ef database update`.
+- [x] No existe script externo de bootstrap.
+- [x] Aplicar migraciones embebidas pendientes desde la aplicación.
+- [x] Startup es idempotente.
+- [x] Fallo de migración impide readiness.
 
 ### Identity bootstrap
 
-- [ ] Crear rol `Administrator` cuando no exista.
-- [ ] Crear administrador inicial cuando no exista.
-- [ ] `UserName = admin`.
-- [ ] `Email = admin@local.invalid`.
-- [ ] Password inicial `admin`.
-- [ ] Asignar `Administrator`.
-- [ ] Reinicio no duplica usuario.
-- [ ] Reinicio no duplica rol.
-- [ ] Reinicio no sobrescribe cambios del usuario.
+- [x] Crear rol `Administrator` cuando no exista.
+- [x] Crear administrador inicial cuando no exista.
+- [x] `UserName = admin`.
+- [x] `Email = admin@local.invalid`.
+- [x] Password inicial `admin`.
+- [x] Asignar `Administrator`.
+- [x] Reinicio no duplica usuario.
+- [x] Reinicio no duplica rol.
+- [x] Reinicio no sobrescribe cambios del usuario.
 
 ### Login
 
-- [ ] Implementar `POST /api/auth/login`.
-- [ ] Login por email.
-- [ ] Validación mediante Identity.
-- [ ] Usuario inexistente devuelve `401`.
-- [ ] Password inválida devuelve `401`.
-- [ ] Usuario deshabilitado queda preparado como estado de identidad si resulta necesario para Phase 3.
-- [ ] Activar contabilización de fallos para lockout.
-- [ ] Respuesta externa genérica.
+- [x] Implementar `POST /api/auth/login`.
+- [x] Login por email.
+- [x] Validación mediante Identity.
+- [x] Usuario inexistente devuelve `401`.
+- [x] Password inválida devuelve `401`.
+- [x] Usuario deshabilitado queda preparado como estado de identidad si resulta necesario para Phase 3.
+- [x] Activar contabilización de fallos para lockout.
+- [x] Respuesta externa genérica.
 
 ### JWT
 
-- [ ] Configurar RS256.
-- [ ] Cargar clave privada desde configuración externa.
-- [ ] Montar la clave privada RSA desde almacenamiento independiente del ciclo de vida del proyecto Compose.
-- [ ] Evitar named volumes administrados por el propio Compose como única copia de la clave privada.
-- [ ] Configurar permisos restrictivos y montaje de sólo lectura cuando la plataforma lo permita.
-- [ ] Emitir access token.
-- [ ] Incluir `sub`.
-- [ ] Incluir `email`.
-- [ ] Incluir `role`.
-- [ ] Incluir `iss`.
-- [ ] Incluir `aud`.
-- [ ] Incluir `iat`.
-- [ ] Incluir `exp`.
-- [ ] Incluir `jti`.
-- [ ] Duración configurable.
-- [ ] Valor inicial recomendado: 15 minutos.
+- [x] Configurar RS256.
+- [x] Cargar clave privada desde configuración externa.
+- [x] Montar la clave privada RSA desde almacenamiento independiente del ciclo de vida del proyecto Compose.
+- [x] Evitar named volumes administrados por el propio Compose como única copia de la clave privada.
+- [x] Configurar permisos restrictivos y montaje de sólo lectura cuando la plataforma lo permita.
+- [x] Emitir access token.
+- [x] Incluir `sub`.
+- [x] Incluir `email`.
+- [x] Incluir `role`.
+- [x] Incluir `iss`.
+- [x] Incluir `aud`.
+- [x] Incluir `iat`.
+- [x] Incluir `exp`.
+- [x] Incluir `jti`.
+- [x] Duración configurable.
+- [x] Valor inicial recomendado: 15 minutos.
 
 ### Health
 
-- [ ] Implementar `/health/live`.
-- [ ] Implementar `/health/ready`.
-- [ ] Readiness comprueba disponibilidad de SQLite.
-- [ ] Readiness falla si startup de DB falla.
+- [x] Implementar `/health/live`.
+- [x] Implementar `/health/ready`.
+- [x] Readiness comprueba disponibilidad de SQLite.
+- [x] Readiness falla si startup de DB falla.
 
 ---
 
@@ -386,18 +386,18 @@ Esta fase establece la plataforma mínima sobre la cual crecerán todas las dem�
 
 No implementar:
 
-- [ ] Refresh tokens.
-- [ ] Logout real basado en sesiones.
-- [ ] CRUD administrativo.
-- [ ] Recuperación de contraseña.
-- [ ] Envío de correo.
-- [ ] Password reset.
-- [ ] Gestión completa de rate limiting.
-- [ ] Cookie de refresh.
-- [ ] Session family.
-- [ ] JWKS.
-- [ ] Rotación de claves.
-- [ ] Blacklist JWT.
+- [x] Refresh tokens.
+- [x] Logout real basado en sesiones.
+- [x] CRUD administrativo.
+- [x] Recuperación de contraseña.
+- [x] Envío de correo.
+- [x] Password reset.
+- [x] Gestión completa de rate limiting.
+- [x] Cookie de refresh.
+- [x] Session family.
+- [x] JWKS.
+- [x] Rotación de claves.
+- [x] Blacklist JWT.
 
 ---
 
@@ -405,48 +405,48 @@ No implementar:
 
 ### Startup
 
-- [ ] Base vacía inicia correctamente.
-- [ ] Schema se crea/aplica automáticamente.
-- [ ] Base existente inicia correctamente.
-- [ ] Reinicio es idempotente.
+- [x] Base vacía inicia correctamente.
+- [x] Schema se crea/aplica automáticamente.
+- [x] Base existente inicia correctamente.
+- [x] Reinicio es idempotente.
 
 ### Admin bootstrap
 
-- [ ] Se crea `Administrator`.
-- [ ] Se crea `admin`.
-- [ ] `admin@local.invalid` existe.
-- [ ] Password inicial `admin` autentica.
-- [ ] Segundo startup no duplica admin.
+- [x] Se crea `Administrator`.
+- [x] Se crea `admin`.
+- [x] `admin@local.invalid` existe.
+- [x] Password inicial `admin` autentica.
+- [x] Segundo startup no duplica admin.
 
 ### Login
 
-- [ ] Login válido.
-- [ ] Password incorrecta.
-- [ ] Email inexistente.
-- [ ] Respuestas externas equivalentes.
-- [ ] Fallos contabilizan para Identity lockout.
+- [x] Login válido.
+- [x] Password incorrecta.
+- [x] Email inexistente.
+- [x] Respuestas externas equivalentes.
+- [x] Fallos contabilizan para Identity lockout.
 
 ### JWT
 
-- [ ] Token firmado con RS256.
-- [ ] Claims obligatorios.
-- [ ] Issuer correcto.
-- [ ] Audience correcto.
-- [ ] Expiración correcta.
-- [ ] Clave privada no aparece en responses/logs.
+- [x] Token firmado con RS256.
+- [x] Claims obligatorios.
+- [x] Issuer correcto.
+- [x] Audience correcto.
+- [x] Expiración correcta.
+- [x] Clave privada no aparece en responses/logs.
 
 ### Health
 
-- [ ] Liveness saludable.
-- [ ] Readiness saludable con DB disponible.
-- [ ] Readiness falla ante error de inicialización.
+- [x] Liveness saludable.
+- [x] Readiness saludable con DB disponible.
+- [x] Readiness falla ante error de inicialización.
 
 ### Persistencia de despliegue
 
-- [ ] SQLite no reside únicamente en la capa efímera del contenedor.
-- [ ] SQLite no depende exclusivamente de un named volume administrado por el proyecto Compose.
-- [ ] La clave privada RSA no depende exclusivamente de un named volume administrado por el proyecto Compose.
-- [ ] Las rutas persistentes quedan documentadas.
+- [x] SQLite no reside únicamente en la capa efímera del contenedor.
+- [x] SQLite no depende exclusivamente de un named volume administrado por el proyecto Compose.
+- [x] La clave privada RSA no depende exclusivamente de un named volume administrado por el proyecto Compose.
+- [x] Las rutas persistentes quedan documentadas.
 
 ---
 
@@ -493,28 +493,28 @@ Authentication API no participa en cada request de negocio.
 
 ### Material público
 
-- [ ] Distribuir/configurar clave pública en API A.
-- [ ] Distribuir/configurar clave pública en API B.
-- [ ] Garantizar que ninguna reciba clave privada.
+- [x] Distribuir/configurar clave pública en API A.
+- [x] Distribuir/configurar clave pública en API B.
+- [x] Garantizar que ninguna reciba clave privada.
 
 ### JWT Bearer
 
 En ambas APIs:
 
-- [ ] Configurar JWT Bearer.
-- [ ] Validar algoritmo esperado.
-- [ ] Validar firma.
-- [ ] Validar issuer.
-- [ ] Validar audience.
-- [ ] Validar expiración.
-- [ ] Mapear `sub`.
-- [ ] Mapear `role`.
+- [x] Configurar JWT Bearer.
+- [x] Validar algoritmo esperado.
+- [x] Validar firma.
+- [x] Validar issuer.
+- [x] Validar audience.
+- [x] Validar expiración.
+- [x] Mapear `sub`.
+- [x] Mapear `role`.
 
 ### Autorización mínima
 
-- [ ] Proteger al menos un endpoint de prueba/real en API A.
-- [ ] Proteger al menos un endpoint de prueba/real en API B.
-- [ ] Diferenciar `401` de `403`.
+- [x] Proteger al menos un endpoint de prueba/real en API A.
+- [x] Proteger al menos un endpoint de prueba/real en API B.
+- [x] Diferenciar `401` de `403`.
 
 ---
 
@@ -522,29 +522,29 @@ En ambas APIs:
 
 No implementar:
 
-- [ ] Refresh.
-- [ ] Usuarios administrativos.
-- [ ] Roles dinámicos.
-- [ ] Revocación.
-- [ ] Introspection.
-- [ ] JWKS.
-- [ ] Validación remota de tokens.
-- [ ] Blacklist.
+- [x] Refresh.
+- [x] Usuarios administrativos.
+- [x] Roles dinámicos.
+- [x] Revocación.
+- [x] Introspection.
+- [x] JWKS.
+- [x] Validación remota de tokens.
+- [x] Blacklist.
 
 ---
 
 ## 8.4 Pruebas mínimas
 
-- [ ] JWT válido permite acceso en API A.
-- [ ] JWT válido permite acceso en API B.
-- [ ] Request sin JWT -> `401`.
-- [ ] Firma inválida -> `401`.
-- [ ] Token expirado -> `401`.
-- [ ] Issuer inválido -> `401`.
-- [ ] Audience inválido -> `401`.
-- [ ] Rol insuficiente -> `403`.
-- [ ] API A funciona sin consultar Auth API por request.
-- [ ] API B funciona sin consultar Auth API por request.
+- [x] JWT válido permite acceso en API A.
+- [x] JWT válido permite acceso en API B.
+- [x] Request sin JWT -> `401`.
+- [x] Firma inválida -> `401`.
+- [x] Token expirado -> `401`.
+- [x] Issuer inválido -> `401`.
+- [x] Audience inválido -> `401`.
+- [x] Rol insuficiente -> `403`.
+- [x] API A funciona sin consultar Auth API por request.
+- [x] API B funciona sin consultar Auth API por request.
 
 ---
 
@@ -573,36 +573,36 @@ Incorporar administración básica de identidades y RBAC sin introducir todavía
 
 ### Usuarios
 
-- [ ] `GET /api/admin/users`.
-- [ ] `GET /api/admin/users/{id}`.
-- [ ] `POST /api/admin/users`.
-- [ ] `PATCH /api/admin/users/{id}`.
-- [ ] `POST /api/admin/users/{id}/enable`.
-- [ ] `POST /api/admin/users/{id}/disable`.
+- [x] `GET /api/admin/users`.
+- [x] `GET /api/admin/users/{id}`.
+- [x] `POST /api/admin/users`.
+- [x] `PATCH /api/admin/users/{id}`.
+- [x] `POST /api/admin/users/{id}/enable`.
+- [x] `POST /api/admin/users/{id}/disable`.
 
 ### Roles
 
-- [ ] `GET /api/admin/roles`.
-- [ ] `POST /api/admin/roles`.
-- [ ] `PATCH /api/admin/roles/{id}`.
-- [ ] `DELETE /api/admin/roles/{id}`.
-- [ ] `PUT /api/admin/users/{id}/roles`.
+- [x] `GET /api/admin/roles`.
+- [x] `POST /api/admin/roles`.
+- [x] `PATCH /api/admin/roles/{id}`.
+- [x] `DELETE /api/admin/roles/{id}`.
+- [x] `PUT /api/admin/users/{id}/roles`.
 
 ### Autorización
 
-- [ ] Proteger `/api/admin/*`.
-- [ ] Requerir `Administrator`.
-- [ ] `401` cuando no está autenticado.
-- [ ] `403` cuando está autenticado sin rol.
+- [x] Proteger `/api/admin/*`.
+- [x] Requerir `Administrator`.
+- [x] `401` cuando no está autenticado.
+- [x] `403` cuando está autenticado sin rol.
 
 ### Reglas de dominio
 
-- [ ] Email único normalizado.
-- [ ] Password cumple política Identity.
-- [ ] Roles únicos.
-- [ ] No eliminar rol con usuarios asignados.
-- [ ] No deshabilitar último administrador habilitado.
-- [ ] No retirar rol Administrator al último administrador habilitado.
+- [x] Email único normalizado.
+- [x] Password cumple política Identity.
+- [x] Roles únicos.
+- [x] No eliminar rol con usuarios asignados.
+- [x] No deshabilitar último administrador habilitado.
+- [x] No retirar rol Administrator al último administrador habilitado.
 
 ### Disable user
 
@@ -622,12 +622,12 @@ No existen aún refresh sessions.
 
 No implementar:
 
-- [ ] RefreshToken.
-- [ ] SessionFamily.
-- [ ] Revoke sessions.
-- [ ] Logout stateful.
-- [ ] Email recovery.
-- [ ] Password reset.
+- [x] RefreshToken.
+- [x] SessionFamily.
+- [x] Revoke sessions.
+- [x] Logout stateful.
+- [x] Email recovery.
+- [x] Password reset.
 
 No crear interfaces ficticias para estas capacidades.
 
@@ -637,32 +637,32 @@ No crear interfaces ficticias para estas capacidades.
 
 ### Users
 
-- [ ] Crear usuario.
-- [ ] Email duplicado rechazado.
-- [ ] Listar usuarios.
-- [ ] Consultar usuario.
-- [ ] Modificación válida.
-- [ ] Deshabilitar.
-- [ ] Usuario deshabilitado no puede login.
-- [ ] Rehabilitar.
-- [ ] Usuario rehabilitado puede volver a login.
+- [x] Crear usuario.
+- [x] Email duplicado rechazado.
+- [x] Listar usuarios.
+- [x] Consultar usuario.
+- [x] Modificación válida.
+- [x] Deshabilitar.
+- [x] Usuario deshabilitado no puede login.
+- [x] Rehabilitar.
+- [x] Usuario rehabilitado puede volver a login.
 
 ### Roles
 
-- [ ] Crear rol.
-- [ ] Rol duplicado rechazado.
-- [ ] Asignar rol.
-- [ ] Retirar rol.
-- [ ] Eliminar rol no asignado.
-- [ ] Rechazar eliminación de rol asignado.
+- [x] Crear rol.
+- [x] Rol duplicado rechazado.
+- [x] Asignar rol.
+- [x] Retirar rol.
+- [x] Eliminar rol no asignado.
+- [x] Rechazar eliminación de rol asignado.
 
 ### Protección administrativa
 
-- [ ] Anónimo -> `401`.
-- [ ] Usuario normal -> `403`.
-- [ ] Administrator -> permitido.
-- [ ] Último administrador no puede deshabilitarse.
-- [ ] Último administrador no puede perder rol.
+- [x] Anónimo -> `401`.
+- [x] Usuario normal -> `403`.
+- [x] Administrator -> permitido.
+- [x] Último administrador no puede deshabilitarse.
+- [x] Último administrador no puede perder rol.
 
 ---
 
@@ -702,19 +702,19 @@ RevokedAtUtc
 ReplacedByTokenId
 ```
 
-- [ ] Definir modelo de refresh token.
-- [ ] Persistir hash, nunca token completo.
-- [ ] Definir familia de tokens.
-- [ ] Definir expiración absoluta.
-- [ ] Definir revocación.
+- [x] Definir modelo de refresh token.
+- [x] Persistir hash, nunca token completo.
+- [x] Definir familia de tokens.
+- [x] Definir expiración absoluta.
+- [x] Definir revocación.
 
 ---
 
 ## 10.3 Endpoints
 
-- [ ] `POST /api/auth/refresh`.
-- [ ] `POST /api/auth/logout`.
-- [ ] `POST /api/admin/users/{id}/revoke-sessions`.
+- [x] `POST /api/auth/refresh`.
+- [x] `POST /api/auth/logout`.
+- [x] `POST /api/admin/users/{id}/revoke-sessions`.
 
 ---
 
@@ -730,39 +730,39 @@ login exitoso
      +--> refresh session
 ```
 
-- [ ] Login crea refresh token.
-- [ ] Login crea FamilyId.
-- [ ] Refresh token se entrega al cliente.
-- [ ] Persistir solamente hash.
+- [x] Login crea refresh token.
+- [x] Login crea FamilyId.
+- [x] Refresh token se entrega al cliente.
+- [x] Persistir solamente hash.
 
 ---
 
 ## 10.5 Refresh rotation
 
-- [ ] Validar token.
-- [ ] Validar expiración.
-- [ ] Validar estado del usuario.
-- [ ] Revocar token presentado.
-- [ ] Crear nuevo token.
-- [ ] Mantener FamilyId.
-- [ ] Emitir nuevo access token.
+- [x] Validar token.
+- [x] Validar expiración.
+- [x] Validar estado del usuario.
+- [x] Revocar token presentado.
+- [x] Crear nuevo token.
+- [x] Mantener FamilyId.
+- [x] Emitir nuevo access token.
 
 ---
 
 ## 10.6 Replay detection
 
-- [ ] Detectar reutilización de token rotado.
-- [ ] Revocar familia completa.
-- [ ] Registrar evento de seguridad.
+- [x] Detectar reutilización de token rotado.
+- [x] Revocar familia completa.
+- [x] Registrar evento de seguridad.
 
 ---
 
 ## 10.7 Logout
 
-- [ ] Revocar sesión/familia correspondiente.
-- [ ] Operación idempotente.
-- [ ] No introducir blacklist de JWT.
-- [ ] Access token vigente expira naturalmente.
+- [x] Revocar sesión/familia correspondiente.
+- [x] Operación idempotente.
+- [x] No introducir blacklist de JWT.
+- [x] Access token vigente expira naturalmente.
 
 ---
 
@@ -777,41 +777,41 @@ disable user
     +--> revoca refresh sessions
 ```
 
-- [ ] Extender disable para revocar sesiones.
-- [ ] Enable no restaura sesiones revocadas.
+- [x] Extender disable para revocar sesiones.
+- [x] Enable no restaura sesiones revocadas.
 
 ---
 
 ## 10.9 Pruebas mínimas
 
-- [ ] Login crea sesión.
-- [ ] Refresh válido.
-- [ ] Refresh rota token.
-- [ ] Token anterior deja de funcionar.
-- [ ] Refresh expirado rechazado.
-- [ ] Token desconocido rechazado.
-- [ ] Reuse detectado.
-- [ ] Reuse revoca familia.
-- [ ] Usuario disabled no puede refresh.
-- [ ] Disable revoca sesiones.
-- [ ] Logout revoca sesión.
-- [ ] Logout idempotente.
-- [ ] Revoke-sessions administrativo.
-- [ ] Access token previo no requiere blacklist.
+- [x] Login crea sesión.
+- [x] Refresh válido.
+- [x] Refresh rota token.
+- [x] Token anterior deja de funcionar.
+- [x] Refresh expirado rechazado.
+- [x] Token desconocido rechazado.
+- [x] Reuse detectado.
+- [x] Reuse revoca familia.
+- [x] Usuario disabled no puede refresh.
+- [x] Disable revoca sesiones.
+- [x] Logout revoca sesión.
+- [x] Logout idempotente.
+- [x] Revoke-sessions administrativo.
+- [x] Access token previo no requiere blacklist.
 
 ---
 
 ## 10.10 Criterio de salida — Gate G4
 
-- [ ] Login + refresh + logout forman un ciclo completo.
-- [ ] Rotación funciona.
-- [ ] Reuse detection funciona.
-- [ ] Disable revoca sesiones.
-- [ ] API A/B continúan validando JWT localmente.
-- [ ] Build PASS.
-- [ ] Tests PASS.
-- [ ] Regression Phase 1-3 PASS.
-- [ ] Commit de cierre creado.
+- [x] Login + refresh + logout forman un ciclo completo.
+- [x] Rotación funciona.
+- [x] Reuse detection funciona.
+- [x] Disable revoca sesiones.
+- [x] API A/B continúan validando JWT localmente.
+- [x] Build PASS.
+- [x] Tests PASS.
+- [x] Regression Phase 1-3 PASS.
+- [x] Commit de cierre creado.
 
 ---
 
@@ -831,14 +831,14 @@ Endpoint:
 POST /api/auth/change-password
 ```
 
-- [ ] Requiere autenticación.
-- [ ] Requiere password actual.
-- [ ] Requiere nueva password.
-- [ ] Validar password actual mediante Identity.
-- [ ] Aplicar política de password.
-- [ ] Actualizar password mediante Identity.
-- [ ] Revocar otras sesiones renovables.
-- [ ] No volver a establecer `admin` automáticamente.
+- [x] Requiere autenticación.
+- [x] Requiere password actual.
+- [x] Requiere nueva password.
+- [x] Validar password actual mediante Identity.
+- [x] Aplicar política de password.
+- [x] Actualizar password mediante Identity.
+- [x] Revocar otras sesiones renovables.
+- [x] No volver a establecer `admin` automáticamente.
 
 ---
 
@@ -869,37 +869,37 @@ new secret remains
 
 No introducir todavía:
 
-- [ ] SMTP.
-- [ ] `IEmailSender`.
-- [ ] Forgot password.
-- [ ] Reset token.
+- [x] SMTP.
+- [x] `IEmailSender`.
+- [x] Forgot password.
+- [x] Reset token.
 
 ---
 
 ## 11.5 Pruebas mínimas
 
-- [ ] Endpoint exige JWT.
-- [ ] Password actual incorrecta rechazada.
-- [ ] Nueva password inválida rechazada.
-- [ ] Cambio exitoso.
-- [ ] Password anterior deja de autenticar.
-- [ ] Password nueva autentica.
-- [ ] Sesiones anteriores revocadas.
-- [ ] Restart no restaura `admin`.
-- [ ] Admin puede cambiar password sin email funcional externo.
+- [x] Endpoint exige JWT.
+- [x] Password actual incorrecta rechazada.
+- [x] Nueva password inválida rechazada.
+- [x] Cambio exitoso.
+- [x] Password anterior deja de autenticar.
+- [x] Password nueva autentica.
+- [x] Sesiones anteriores revocadas.
+- [x] Restart no restaura `admin`.
+- [x] Admin puede cambiar password sin email funcional externo.
 
 ---
 
 ## 11.6 Criterio de salida — Gate G5
 
-- [ ] Change password completo.
-- [ ] Admin inicial puede abandonar credencial por defecto.
-- [ ] Revocación de sesiones integrada.
-- [ ] Sin infraestructura de email anticipada.
-- [ ] Build PASS.
-- [ ] Tests PASS.
-- [ ] Regression Phase 1-4 PASS.
-- [ ] Commit de cierre creado.
+- [x] Change password completo.
+- [x] Admin inicial puede abandonar credencial por defecto.
+- [x] Revocación de sesiones integrada.
+- [x] Sin infraestructura de email anticipada.
+- [x] Build PASS.
+- [x] Tests PASS.
+- [x] Regression Phase 1-4 PASS.
+- [x] Commit de cierre creado.
 
 ---
 
@@ -923,22 +923,22 @@ SMTP implementation
 Password reset token delivery
 ```
 
-- [ ] Crear abstracción mínima de envío de correo.
-- [ ] Implementación SMTP.
-- [ ] Configuración externa.
-- [ ] No registrar secretos SMTP.
-- [ ] No registrar reset token.
+- [x] Crear abstracción mínima de envío de correo.
+- [x] Implementación SMTP.
+- [x] Configuración externa.
+- [x] No registrar secretos SMTP.
+- [x] No registrar reset token.
 
 ---
 
 ## 12.3 Data Protection
 
-- [ ] Persistir Data Protection keys.
-- [ ] Utilizar almacenamiento independiente del ciclo de vida del proyecto Compose.
-- [ ] Utilizar bind mount de host como opción de referencia o volumen `external` como alternativa.
-- [ ] Verificar supervivencia a restart.
-- [ ] Verificar que la configuración no dependa de named volumes administrados por el propio Compose.
-- [ ] No agregar servicio externo.
+- [x] Persistir Data Protection keys.
+- [x] Utilizar almacenamiento independiente del ciclo de vida del proyecto Compose.
+- [x] Utilizar bind mount de host como opción de referencia o volumen `external` como alternativa.
+- [x] Verificar supervivencia a restart.
+- [x] Verificar que la configuración no dependa de named volumes administrados por el propio Compose.
+- [x] No agregar servicio externo.
 
 ---
 
@@ -950,12 +950,12 @@ Endpoint:
 POST /api/auth/forgot-password
 ```
 
-- [ ] Acceso anónimo.
-- [ ] Recibe email.
-- [ ] Respuesta genérica.
-- [ ] No revela existencia de usuario.
-- [ ] Generar token mediante Identity.
-- [ ] Solicitar envío de correo.
+- [x] Acceso anónimo.
+- [x] Recibe email.
+- [x] Respuesta genérica.
+- [x] No revela existencia de usuario.
+- [x] Generar token mediante Identity.
+- [x] Solicitar envío de correo.
 
 ---
 
@@ -967,45 +967,45 @@ Endpoint:
 POST /api/auth/reset-password
 ```
 
-- [ ] Recibe email.
-- [ ] Recibe reset token.
-- [ ] Recibe nueva password.
-- [ ] Validar token.
-- [ ] Validar password.
-- [ ] Cambiar password.
-- [ ] Revocar todas las sesiones renovables.
+- [x] Recibe email.
+- [x] Recibe reset token.
+- [x] Recibe nueva password.
+- [x] Validar token.
+- [x] Validar password.
+- [x] Cambiar password.
+- [x] Revocar todas las sesiones renovables.
 
 ---
 
 ## 12.6 Pruebas mínimas
 
-- [ ] Forgot para usuario existente.
-- [ ] Forgot para usuario inexistente.
-- [ ] Misma respuesta externa.
-- [ ] Email sender invocado sólo cuando corresponde.
-- [ ] Reset token válido.
-- [ ] Reset token inválido.
-- [ ] Reset token alterado.
-- [ ] Reset token vencido cuando pueda probarse.
-- [ ] Reset cambia password.
-- [ ] Reset revoca sesiones.
-- [ ] Restart no invalida innecesariamente token aún válido.
-- [ ] El key ring de Data Protection está configurado fuera del ciclo de vida del proyecto Compose.
-- [ ] Reset tokens no aparecen en logs.
+- [x] Forgot para usuario existente.
+- [x] Forgot para usuario inexistente.
+- [x] Misma respuesta externa.
+- [x] Email sender invocado sólo cuando corresponde.
+- [x] Reset token válido.
+- [x] Reset token inválido.
+- [x] Reset token alterado.
+- [x] Reset token vencido cuando pueda probarse.
+- [x] Reset cambia password.
+- [x] Reset revoca sesiones.
+- [x] Restart no invalida innecesariamente token aún válido.
+- [x] El key ring de Data Protection está configurado fuera del ciclo de vida del proyecto Compose.
+- [x] Reset tokens no aparecen en logs.
 
 ---
 
 ## 12.7 Criterio de salida — Gate G6
 
-- [ ] Forgot/reset completo.
-- [ ] SMTP desacoplado.
-- [ ] Data Protection persistente.
-- [ ] Anti-enumeración funcional.
-- [ ] Reset revoca sesiones.
-- [ ] Build PASS.
-- [ ] Tests PASS.
-- [ ] Regression Phase 1-5 PASS.
-- [ ] Commit de cierre creado.
+- [x] Forgot/reset completo.
+- [x] SMTP desacoplado.
+- [x] Data Protection persistente.
+- [x] Anti-enumeración funcional.
+- [x] Reset revoca sesiones.
+- [x] Build PASS.
+- [x] Tests PASS.
+- [x] Regression Phase 1-5 PASS.
+- [x] Commit de cierre creado.
 
 ---
 
@@ -1021,11 +1021,11 @@ Se realiza en esta etapa porque ahora ya existen todos los endpoints sensibles.
 
 ## 13.2 Identity lockout
 
-- [ ] `MaxFailedAccessAttempts = 5` inicial.
-- [ ] `DefaultLockoutTimeSpan = 15 min` inicial.
-- [ ] Configurable externamente.
-- [ ] Login contabiliza fallos.
-- [ ] Respuesta no revela lockout.
+- [x] `MaxFailedAccessAttempts = 5` inicial.
+- [x] `DefaultLockoutTimeSpan = 15 min` inicial.
+- [x] Configurable externamente.
+- [x] Login contabiliza fallos.
+- [x] Respuesta no revela lockout.
 
 ---
 
@@ -1033,48 +1033,48 @@ Se realiza en esta etapa porque ahora ya existen todos los endpoints sensibles.
 
 Políticas independientes para:
 
-- [ ] `/login`.
-- [ ] `/refresh`.
-- [ ] `/forgot-password`.
-- [ ] `/reset-password`.
+- [x] `/login`.
+- [x] `/refresh`.
+- [x] `/forgot-password`.
+- [x] `/reset-password`.
 
 Requisitos:
 
-- [ ] Rate limiting por IP.
-- [ ] Configurable.
-- [ ] `429` al exceder límite.
-- [ ] Forgot puede limitar además por email normalizado.
+- [x] Rate limiting por IP.
+- [x] Configurable.
+- [x] `429` al exceder límite.
+- [x] Forgot puede limitar además por email normalizado.
 
 ---
 
 ## 13.4 Reverse proxy
 
-- [ ] Primera capa de rate limiting.
-- [ ] Forwarded headers.
-- [ ] Known proxies/networks.
-- [ ] No confiar en forwarded headers arbitrarios.
-- [ ] Verificar IP real de origen.
+- [x] Primera capa de rate limiting.
+- [x] Forwarded headers.
+- [x] Known proxies/networks.
+- [x] No confiar en forwarded headers arbitrarios.
+- [x] Verificar IP real de origen.
 
 ---
 
 ## 13.5 Refresh cookie
 
-- [ ] `HttpOnly`.
-- [ ] `Secure` en producción.
-- [ ] `SameSite` restrictivo.
-- [ ] Path limitado cuando corresponda.
-- [ ] Eliminar/inutilizar cookie en logout.
-- [ ] Access token preferentemente en memoria.
+- [x] `HttpOnly`.
+- [x] `Secure` en producción.
+- [x] `SameSite` restrictivo.
+- [x] Path limitado cuando corresponda.
+- [x] Eliminar/inutilizar cookie en logout.
+- [x] Access token preferentemente en memoria.
 
 ---
 
 ## 13.6 CSRF / origin controls
 
-- [ ] Refresh protegido frente a cross-site request indebido.
-- [ ] Logout protegido.
-- [ ] Validación de origen cuando corresponda.
-- [ ] CORS no se habilita si same-origin lo hace innecesario.
-- [ ] Si CORS es necesario, allowlist explícita.
+- [x] Refresh protegido frente a cross-site request indebido.
+- [x] Logout protegido.
+- [x] Validación de origen cuando corresponda.
+- [x] CORS no se habilita si same-origin lo hace innecesario.
+- [x] Si CORS es necesario, allowlist explícita.
 
 ---
 
@@ -1089,57 +1089,57 @@ locked account
 disabled account
 ```
 
-- [ ] Códigos equivalentes.
-- [ ] Mensajes equivalentes.
-- [ ] Timing razonablemente comparable.
-- [ ] Forgot no enumera.
-- [ ] Reset no revela información innecesaria.
+- [x] Códigos equivalentes.
+- [x] Mensajes equivalentes.
+- [x] Timing razonablemente comparable.
+- [x] Forgot no enumera.
+- [x] Reset no revela información innecesaria.
 
 ---
 
 ## 13.8 Protección de secretos
 
-- [ ] Passwords fuera de logs.
-- [ ] Access tokens completos fuera de logs.
-- [ ] Refresh tokens fuera de logs.
-- [ ] Reset tokens fuera de logs.
-- [ ] RSA private key fuera de logs.
-- [ ] Secretos de email fuera de logs.
+- [x] Passwords fuera de logs.
+- [x] Access tokens completos fuera de logs.
+- [x] Refresh tokens fuera de logs.
+- [x] Reset tokens fuera de logs.
+- [x] RSA private key fuera de logs.
+- [x] Secretos de email fuera de logs.
 
 ---
 
 ## 13.9 Pruebas mínimas
 
-- [ ] 5 fallos bloquean cuenta.
-- [ ] Lockout expira.
-- [ ] Rate limit login.
-- [ ] Rate limit refresh.
-- [ ] Rate limit forgot.
-- [ ] Rate limit reset.
-- [ ] Lockout por cuenta y rate limiting por IP son independientes.
-- [ ] `429` correcto.
-- [ ] Forwarded header spoofing no altera origen confiable.
-- [ ] Refresh cookie tiene flags requeridos.
-- [ ] Logout limpia cookie.
-- [ ] Request cross-origin indebido rechazado cuando corresponda.
-- [ ] Anti-enumeration responses.
-- [ ] Secret scan/log assertions.
+- [x] 5 fallos bloquean cuenta.
+- [x] Lockout expira.
+- [x] Rate limit login.
+- [x] Rate limit refresh.
+- [x] Rate limit forgot.
+- [x] Rate limit reset.
+- [x] Lockout por cuenta y rate limiting por IP son independientes.
+- [x] `429` correcto.
+- [x] Forwarded header spoofing no altera origen confiable.
+- [x] Refresh cookie tiene flags requeridos.
+- [x] Logout limpia cookie.
+- [x] Request cross-origin indebido rechazado cuando corresponda.
+- [x] Anti-enumeration responses.
+- [x] Secret scan/log assertions.
 
 ---
 
 ## 13.10 Criterio de salida — Gate G7
 
-- [ ] Identity lockout completo.
-- [ ] Rate limiting completo.
-- [ ] Proxy trust configurado.
-- [ ] Cookie segura.
-- [ ] CSRF/origin cubierto.
-- [ ] Anti-enumeration cubierto.
-- [ ] Logs sin secretos.
-- [ ] Build PASS.
-- [ ] Tests PASS.
-- [ ] Regression Phase 1-6 PASS.
-- [ ] Commit de cierre creado.
+- [x] Identity lockout completo.
+- [x] Rate limiting completo.
+- [x] Proxy trust configurado.
+- [x] Cookie segura.
+- [x] CSRF/origin cubierto.
+- [x] Anti-enumeration cubierto.
+- [x] Logs sin secretos.
+- [x] Build PASS.
+- [x] Tests PASS.
+- [x] Regression Phase 1-6 PASS.
+- [x] Commit de cierre creado.
 
 ---
 
@@ -1157,30 +1157,30 @@ Si una feature funcional de fases anteriores falta, deberá corregirse en su fas
 
 ## 14.2 Logging y observabilidad
 
-- [ ] Logging estructurado.
-- [ ] Correlation ID.
-- [ ] Login success.
-- [ ] Login failure.
-- [ ] Lockout.
-- [ ] Rate limit.
-- [ ] Logout.
-- [ ] Password change.
-- [ ] Password reset.
-- [ ] User create.
-- [ ] User disable/enable.
-- [ ] Role assign/remove.
-- [ ] Refresh reuse detected.
-- [ ] Sessions revoked.
+- [x] Logging estructurado.
+- [x] Correlation ID.
+- [x] Login success.
+- [x] Login failure.
+- [x] Lockout.
+- [x] Rate limit.
+- [x] Logout.
+- [x] Password change.
+- [x] Password reset.
+- [x] User create.
+- [x] User disable/enable.
+- [x] Role assign/remove.
+- [x] Refresh reuse detected.
+- [x] Sessions revoked.
 
 ---
 
 ## 14.3 OpenAPI
 
-- [ ] Contrato OpenAPI generado.
-- [ ] Requests documentados.
-- [ ] Responses documentadas.
-- [ ] Auth Bearer documentada.
-- [ ] Documentation UI limitada según ambiente.
+- [x] Contrato OpenAPI generado.
+- [x] Requests documentados.
+- [x] Responses documentadas.
+- [x] Auth Bearer documentada.
+- [x] Documentation UI limitada según ambiente.
 
 ---
 
@@ -1197,16 +1197,16 @@ api-b
 
 Validar:
 
-- [ ] No migration container.
-- [ ] No bootstrap container.
-- [ ] No Redis.
-- [ ] No Vault.
-- [ ] No servicio Identity externo.
-- [ ] Frontend/reverse proxy funciona.
-- [ ] El navegador enruta `/auth/*`, `/api-a/*` y `/api-b/*` exclusivamente a través del punto de entrada del frontend/reverse proxy.
-- [ ] Auth API sin puerto público directo en producción.
-- [ ] API A y API B sin exposición directa necesaria para el navegador.
-- [ ] Internal network correcta.
+- [x] No migration container.
+- [x] No bootstrap container.
+- [x] No Redis.
+- [x] No Vault.
+- [x] No servicio Identity externo.
+- [x] Frontend/reverse proxy funciona.
+- [x] El navegador enruta `/auth/*`, `/api-a/*` y `/api-b/*` exclusivamente a través del punto de entrada del frontend/reverse proxy.
+- [x] Auth API sin puerto público directo en producción.
+- [x] API A y API B sin exposición directa necesaria para el navegador.
+- [x] Internal network correcta.
 
 ---
 
@@ -1214,20 +1214,20 @@ Validar:
 
 Validar persistencia de:
 
-- [ ] SQLite.
-- [ ] Identity users.
-- [ ] Roles.
-- [ ] Refresh sessions.
-- [ ] Data Protection keys.
-- [ ] RSA signing key.
+- [x] SQLite.
+- [x] Identity users.
+- [x] Roles.
+- [x] Refresh sessions.
+- [x] Data Protection keys.
+- [x] RSA signing key.
 
 Validar además:
 
-- [ ] SQLite reside en almacenamiento independiente del ciclo de vida del proyecto Compose.
-- [ ] Data Protection reside en almacenamiento independiente del ciclo de vida del proyecto Compose.
-- [ ] RSA private key reside en almacenamiento independiente del ciclo de vida del proyecto Compose.
-- [ ] Las rutas persistentes están documentadas.
-- [ ] La eliminación de datos requiere una acción explícita sobre el almacenamiento persistente.
+- [x] SQLite reside en almacenamiento independiente del ciclo de vida del proyecto Compose.
+- [x] Data Protection reside en almacenamiento independiente del ciclo de vida del proyecto Compose.
+- [x] RSA private key reside en almacenamiento independiente del ciclo de vida del proyecto Compose.
+- [x] Las rutas persistentes están documentadas.
+- [x] La eliminación de datos requiere una acción explícita sobre el almacenamiento persistente.
 
 ---
 
@@ -1235,69 +1235,69 @@ Validar además:
 
 Validar primero el ciclo ordinario de restart/rebuild, comprobando que:
 
-- [ ] DB permanece.
-- [ ] Usuarios permanecen.
-- [ ] Roles permanecen.
-- [ ] Password modificada del admin permanece.
-- [ ] Refresh/session state esperado permanece.
-- [ ] Data Protection permanece.
-- [ ] Signing key permanece.
-- [ ] API A sigue validando.
-- [ ] API B sigue validando.
+- [x] DB permanece.
+- [x] Usuarios permanecen.
+- [x] Roles permanecen.
+- [x] Password modificada del admin permanece.
+- [x] Refresh/session state esperado permanece.
+- [x] Data Protection permanece.
+- [x] Signing key permanece.
+- [x] API A sigue validando.
+- [x] API B sigue validando.
 
 En un entorno descartable equivalente a producción, validar explícitamente el escenario destructivo para volúmenes administrados por Compose:
 
-- [ ] Ejecutar `docker compose down -v`.
-- [ ] Verificar que SQLite continúa existiendo en el almacenamiento persistente externo al Compose.
-- [ ] Verificar que el key ring de Data Protection continúa existiendo.
-- [ ] Verificar que la clave privada RSA continúa existiendo.
-- [ ] Ejecutar nuevamente `docker compose up -d`.
-- [ ] Verificar que usuarios y roles continúan disponibles.
-- [ ] Verificar que la password modificada del administrador continúa vigente.
-- [ ] Verificar que API A y API B pueden seguir validando tokens emitidos con la clave persistida.
+- [x] Ejecutar `docker compose down -v`.
+- [x] Verificar que SQLite continúa existiendo en el almacenamiento persistente externo al Compose.
+- [x] Verificar que el key ring de Data Protection continúa existiendo.
+- [x] Verificar que la clave privada RSA continúa existiendo.
+- [x] Ejecutar nuevamente `docker compose up -d`.
+- [x] Verificar que usuarios y roles continúan disponibles.
+- [x] Verificar que la password modificada del administrador continúa vigente.
+- [x] Verificar que API A y API B pueden seguir validando tokens emitidos con la clave persistida.
 
 ---
 
 ## 14.7 Backup y restauración de SQLite
 
-- [ ] Documentar procedimiento de backup consistente de SQLite.
-- [ ] El procedimiento no requiere un servicio permanente adicional.
-- [ ] Evitar copias inconsistentes durante escrituras concurrentes.
-- [ ] Documentar procedimiento de restauración.
-- [ ] Crear un backup de prueba.
-- [ ] Restaurarlo en un entorno descartable.
-- [ ] Iniciar Authentication API contra la base restaurada.
-- [ ] Verificar usuarios.
-- [ ] Verificar roles.
-- [ ] Verificar autenticación de al menos una cuenta conocida.
+- [x] Documentar procedimiento de backup consistente de SQLite.
+- [x] El procedimiento no requiere un servicio permanente adicional.
+- [x] Evitar copias inconsistentes durante escrituras concurrentes.
+- [x] Documentar procedimiento de restauración.
+- [x] Crear un backup de prueba.
+- [x] Restaurarlo en un entorno descartable.
+- [x] Iniciar Authentication API contra la base restaurada.
+- [x] Verificar usuarios.
+- [x] Verificar roles.
+- [x] Verificar autenticación de al menos una cuenta conocida.
 
 ---
 
 ## 14.8 End-to-end acceptance flow
 
-- [ ] Deploy desde almacenamiento vacío.
-- [ ] Admin automático.
-- [ ] Login admin.
-- [ ] Cambiar password admin.
-- [ ] Crear usuario.
-- [ ] Crear/asignar rol.
-- [ ] Login usuario.
-- [ ] Acceso API A.
-- [ ] Acceso API B.
-- [ ] Refresh.
-- [ ] Rotation.
-- [ ] Logout.
-- [ ] Re-login.
-- [ ] Forgot password.
-- [ ] Reset password.
-- [ ] Sesiones anteriores revocadas.
-- [ ] Disable user.
-- [ ] Login rechazado.
-- [ ] Rate limit demostrado.
-- [ ] Lockout demostrado.
-- [ ] `docker compose down -v` no destruye SQLite, Data Protection ni clave RSA.
-- [ ] Backup/restore SQLite demostrado.
-- [ ] Acceso externo únicamente a través del reverse proxy.
+- [x] Deploy desde almacenamiento vacío.
+- [x] Admin automático.
+- [x] Login admin.
+- [x] Cambiar password admin.
+- [x] Crear usuario.
+- [x] Crear/asignar rol.
+- [x] Login usuario.
+- [x] Acceso API A.
+- [x] Acceso API B.
+- [x] Refresh.
+- [x] Rotation.
+- [x] Logout.
+- [x] Re-login.
+- [x] Forgot password.
+- [x] Reset password.
+- [x] Sesiones anteriores revocadas.
+- [x] Disable user.
+- [x] Login rechazado.
+- [x] Rate limit demostrado.
+- [x] Lockout demostrado.
+- [x] `docker compose down -v` no destruye SQLite, Data Protection ni clave RSA.
+- [x] Backup/restore SQLite demostrado.
+- [x] Acceso externo únicamente a través del reverse proxy.
 
 ---
 
@@ -1305,23 +1305,23 @@ En un entorno descartable equivalente a producción, validar explícitamente el 
 
 La implementación completa podrá considerarse terminada cuando:
 
-- [ ] Todos los requisitos MVP de la SRS estén implementados.
-- [ ] Todos los gates G1-G7 permanezcan PASS.
-- [ ] Compose final sea autocontenido.
-- [ ] No existan pasos manuales de migración.
-- [ ] No exista bootstrap externo.
-- [ ] Persistencia crítica sea independiente del ciclo de vida de Compose.
-- [ ] `docker compose down -v` survival PASS en entorno de aceptación.
-- [ ] SQLite backup PASS.
-- [ ] SQLite restore PASS.
-- [ ] Reverse proxy routing PASS.
-- [ ] E2E acceptance PASS.
-- [ ] Tests completos PASS.
-- [ ] Build PASS.
-- [ ] Logs revisados.
-- [ ] OpenAPI revisado.
-- [ ] Documentación de operación actualizada.
-- [ ] Commit/tag de cierre creado.
+- [x] Todos los requisitos MVP de la SRS estén implementados.
+- [x] Todos los gates G1-G7 permanezcan PASS.
+- [x] Compose final sea autocontenido.
+- [x] No existan pasos manuales de migración.
+- [x] No exista bootstrap externo.
+- [x] Persistencia crítica sea independiente del ciclo de vida de Compose.
+- [x] `docker compose down -v` survival PASS en entorno de aceptación.
+- [x] SQLite backup PASS.
+- [x] SQLite restore PASS.
+- [x] Reverse proxy routing PASS.
+- [x] E2E acceptance PASS.
+- [x] Tests completos PASS.
+- [x] Build PASS.
+- [x] Logs revisados.
+- [x] OpenAPI revisado.
+- [x] Documentación de operación actualizada.
+- [x] Commit/tag de cierre creado.
 
 ---
 

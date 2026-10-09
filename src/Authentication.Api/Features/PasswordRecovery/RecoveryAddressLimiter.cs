@@ -13,11 +13,13 @@ namespace Authentication.Api.Features.PasswordRecovery;
 public sealed class RecoveryAddressLimiter : IDisposable
 {
     private readonly PartitionedRateLimiter<string> _limiter;
+    private readonly bool _enabled;
 
     public RecoveryAddressLimiter(IOptions<RateLimitingOptions> options)
     {
         ArgumentNullException.ThrowIfNull(options);
 
+        _enabled = options.Value.Enabled;
         var policy = options.Value.ForgotPasswordAddress;
         _limiter = PartitionedRateLimiter.Create<string, string>(address =>
             RateLimitPartition.GetFixedWindowLimiter(
@@ -35,6 +37,11 @@ public sealed class RecoveryAddressLimiter : IDisposable
     public (bool Acquired, TimeSpan? RetryAfter) TryAcquire(string normalizedEmail)
     {
         ArgumentNullException.ThrowIfNull(normalizedEmail);
+
+        if (!_enabled)
+        {
+            return (true, null);
+        }
 
         using var lease = _limiter.AttemptAcquire(normalizedEmail);
         if (lease.IsAcquired)
