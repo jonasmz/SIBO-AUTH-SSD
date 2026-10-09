@@ -10,6 +10,14 @@ public sealed class RateLimitingOptions
 {
     public const string SectionName = "RateLimiting";
 
+    /// <summary>
+    /// Master switch (<c>RateLimiting:Enabled</c>, default on). When off, the application applies no request limit;
+    /// intended for tests and staging, never for an exposed deployment. Identity lockout is independent of it.
+    /// </summary>
+    public bool Enabled { get; init; } = true;
+
+    private bool EnabledIsValid { get; init; } = true;
+
     public RateLimitPolicy Login { get; init; } = new(10, 60);
 
     public RateLimitPolicy Refresh { get; init; } = new(30, 60);
@@ -27,8 +35,13 @@ public sealed class RateLimitingOptions
 
         var defaults = new RateLimitingOptions();
 
+        var enabledText = configuration[$"{SectionName}:Enabled"];
+        var enabledIsValid = string.IsNullOrWhiteSpace(enabledText) || bool.TryParse(enabledText, out _);
+
         return new RateLimitingOptions
         {
+            Enabled = string.IsNullOrWhiteSpace(enabledText) || !bool.TryParse(enabledText, out var enabled) || enabled,
+            EnabledIsValid = enabledIsValid,
             Login = Read(configuration, nameof(Login), defaults.Login),
             Refresh = Read(configuration, nameof(Refresh), defaults.Refresh),
             ForgotPassword = Read(configuration, nameof(ForgotPassword), defaults.ForgotPassword),
@@ -40,6 +53,11 @@ public sealed class RateLimitingOptions
     /// <summary>Returns the name of the first invalid setting (never its value), or <see langword="null"/>.</summary>
     public string? FirstInvalidSetting()
     {
+        if (!EnabledIsValid)
+        {
+            return $"{SectionName}:Enabled";
+        }
+
         foreach (var (name, policy) in Policies())
         {
             if (policy.PermitLimit <= 0)

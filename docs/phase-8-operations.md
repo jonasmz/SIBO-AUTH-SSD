@@ -246,3 +246,33 @@ Phase 7 acceptance: ALL PASS
 PASS  Phase 7 acceptance regression (includes Phases 6, 5, 4, 3, 2 and 1)
 Phase 8 acceptance: ALL PASS
 ```
+
+## Staging
+
+`deploy/staging/prepare.sh [ROOT] [PUBLIC_HOST]` prepares a persistent staging environment (default `./.staging`,
+git-ignored): host directories with the ownership and modes above, an RSA key pair, a self-signed TLS
+certificate, a copy of the temporary frontend (`deploy/frontend-stopgap`) and `staging.env`. It never overwrites
+existing keys, certificate, data or environment file. Start it with the command the script prints
+(`compose.yml` plus `deploy/staging/compose.mailpit.yml`, a mail catcher bound to `127.0.0.1:8025`). For a remote
+host pass its name or address so the certificate and `AUTH_FRONTEND_ORIGIN` match the URL testers use; for real
+email replace the `AUTH_SMTP_*` values and drop the mailpit override. Change the initial administrator password
+(`admin@local.invalid` / `admin`) on first use.
+
+## Behind Cloudflare
+
+With Cloudflare as the first layer, the TCP peer Nginx sees is a Cloudflare edge address, so without
+correction every client would share one address for the proxy's first limiting layer and for auth-api's request
+limits and logs. `deploy/frontend/cloudflare-realip.conf` lists Cloudflare's published ranges
+(`set_real_ip_from`) and takes the client from `CF-Connecting-IP` (`real_ip_header`). The header is honored
+**only** when the peer is inside those ranges; from any other peer it is ignored, so it cannot be forged
+(covered by `phase-8.sh`). The restored address becomes `$remote_addr`, which Nginx writes to `X-Forwarded-For`
+for auth-api, so no application change is needed and `RateLimitApplied` names the real client.
+
+- **Keep the ranges current.** Run `deploy/frontend/update-cloudflare-ips.sh`, review the diff and restart
+  `frontend` (Nginx reads the file at start). Cloudflare announces changes at https://www.cloudflare.com/ips.
+- **Restrict the origin.** The header only helps if all traffic really comes through Cloudflare: allow ports 80/443
+  only from those ranges in the host firewall (or use authenticated origin pulls). Anyone who reaches the origin
+  directly is limited by their own address, never by a forged one.
+- **Cloudflare settings.** Use SSL/TLS mode Full (strict) so the origin keeps HTTPS (`X-Forwarded-Proto`), and do not
+  add a second proxy hop in between without adding its ranges as well.
+- **Shared addresses.** Users behind one NAT still share a counter; that is inherent to per-address limits.

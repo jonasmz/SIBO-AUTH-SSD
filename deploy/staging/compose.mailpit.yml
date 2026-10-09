@@ -1,0 +1,13 @@
+# Staging-only override: a mail catcher so password-recovery emails can be read without a real SMTP provider.
+# The inbox UI listens on the loopback interface only. Never use it in production.
+services:
+  mail-sink:
+    image: axllent/mailpit:v1.31.1@sha256:98b916bd3c8d61f7633a52d3ea2f58d00620cb01ca57ab59edde68c347a95365
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    ports:
+      - "127.0.0.1:${STAGING_MAILBOX_PORT:-8025}:8025"
+  auth-api:
+    depends_on:
+      - mail-sink

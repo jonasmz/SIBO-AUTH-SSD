@@ -23,7 +23,9 @@ RUNTIME_IMAGE="mcr.microsoft.com/dotnet/aspnet:10.0"
 
 export FRONTEND_HTTPS_PORT="${FRONTEND_HTTPS_PORT:-18443}"
 export FRONTEND_HTTP_PORT="${FRONTEND_HTTP_PORT:-18088}"
-export FRONTEND_INTERNAL_ADDRESS="${FRONTEND_INTERNAL_ADDRESS:-172.30.80.10}"
+# Not the 172.30.x default of compose.yml: hosts often have a route (VPN, other bridge) over it.
+export AUTH_INTERNAL_SUBNET="${AUTH_INTERNAL_SUBNET:-172.29.80.0/24}"
+export FRONTEND_INTERNAL_ADDRESS="${FRONTEND_INTERNAL_ADDRESS:-172.29.80.10}"
 ENTRY="https://localhost:${FRONTEND_HTTPS_PORT}"
 
 export AUTH_SQLITE_HOST_PATH="$STATE/data"
@@ -314,7 +316,7 @@ cp "$STATE/backup/auth.db" "$STATE/restore-data/auth.db"
 chmod 0666 "$STATE/restore-data/auth.db"
 (
   export COMPOSE_PROJECT_NAME="$RESTORE_PROJECT"
-  export AUTH_INTERNAL_SUBNET="172.30.81.0/24" FRONTEND_INTERNAL_ADDRESS="172.30.81.10" AUTH_TRUSTED_PROXIES="172.30.81.10"
+  export AUTH_INTERNAL_SUBNET="172.29.81.0/24" FRONTEND_INTERNAL_ADDRESS="172.29.81.10" AUTH_TRUSTED_PROXIES="172.29.81.10"
   export FRONTEND_HTTPS_PORT="18444" FRONTEND_HTTP_PORT="18089" MAIL_SINK_HTTP_PORT="18026"
   export AUTH_SQLITE_HOST_PATH="$STATE/restore-data" AUTH_DATAPROTECTION_HOST_PATH="$RESTORE_ROOT/dataprotection" AUTH_LOGS_HOST_PATH="$RESTORE_ROOT/logs"
   export AUTH_FRONTEND_ORIGIN="https://localhost:18444"
@@ -457,7 +459,7 @@ AUTH_RATE_LIMIT_LOGIN_PERMIT_LIMIT=3 AUTH_RATE_LIMIT_LOGIN_WINDOW_SECONDS=300 do
 wait_ready || fail "auth-api was not ready after recreation with the lower login limit"
 STATUSES=""
 for _ in 1 2 3 4; do
-  STATUSES="$STATUSES $(login nobody@example.test "$WRONG_PASSWORD" --header "X-Forwarded-For: $FORGED")"
+  STATUSES="$STATUSES $(login nobody@example.test "$WRONG_PASSWORD" --header "X-Forwarded-For: $FORGED" --header "CF-Connecting-IP: $FORGED")"
 done
 [ "${STATUSES# }" = "401 401 401 429" ] || fail "the forged-header requests were not limited as one client ('${STATUSES# }')"
 grep -qi '^content-type: application/problem+json' "$HEADER_FILE" || fail "the login 429 is not application/problem+json"

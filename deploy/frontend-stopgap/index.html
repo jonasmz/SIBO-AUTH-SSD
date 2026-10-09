@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Acceso · Complejo Buena Onda</title>
+    <meta name="robots" content="noindex">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png">
+    <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="/css/pixel.css">
+</head>
+<body>
+<main>
+    <section class="min-vh-100 d-flex align-items-center section-image overlay-soft-dark"
+             style="background-image: url('/img/form-image.jpg'); background-size: cover; background-position: center;">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-12 d-flex align-items-center justify-content-center">
+                    <div class="signin-inner my-4 my-lg-0 bg-white shadow-soft border rounded border-gray-300 p-4 p-lg-5 w-100 fmxw-500">
+
+                        <div id="alert" class="alert d-none" role="alert" aria-live="polite"></div>
+
+                        <!-- Login -->
+                        <section id="view-login" data-view hidden>
+                            <div class="text-center mb-4"><h1 class="mb-0 h3">Iniciar sesión</h1></div>
+                            <form id="form-login" class="mt-4" novalidate>
+                                <div class="form-group mb-4">
+                                    <label for="login-email">Correo electrónico</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><span class="fas fa-envelope"></span></span>
+                                        <input type="email" class="form-control" id="login-email" name="email" autocomplete="username" required>
+                                    </div>
+                                </div>
+                                <div class="form-group mb-4">
+                                    <label for="login-password">Contraseña</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><span class="fas fa-unlock-alt"></span></span>
+                                        <input type="password" class="form-control" id="login-password" name="password" autocomplete="current-password" required>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-end mb-4">
+                                    <a href="#/forgot" class="small">¿Olvidaste tu contraseña?</a>
+                                </div>
+                                <div class="d-grid"><button type="submit" class="btn btn-primary">Entrar</button></div>
+                            </form>
+                        </section>
+
+                        <!-- Forgot password -->
+                        <section id="view-forgot" data-view hidden>
+                            <div class="text-center mb-4">
+                                <h1 class="mb-2 h3">Recuperar contraseña</h1>
+                                <p class="mb-0 small">Te enviaremos un código para restablecerla.</p>
+                            </div>
+                            <form id="form-forgot" class="mt-4" novalidate>
+                                <div class="form-group mb-4">
+                                    <label for="forgot-email">Correo electrónico</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><span class="fas fa-envelope"></span></span>
+                                        <input type="email" class="form-control" id="forgot-email" name="email" autocomplete="username" required>
+                                    </div>
+                                </div>
+                                <div class="d-grid"><button type="submit" class="btn btn-primary">Enviar código</button></div>
+                            </form>
+                            <div class="d-flex justify-content-between mt-4 small">
+                                <a href="#/login">Volver a iniciar sesión</a>
+                                <a href="#/reset">Ya tengo un código</a>
+                            </div>
+                        </section>
+
+                        <!-- Reset password (the emailed code is pasted here) -->
+                        <section id="view-reset" data-view hidden>
+                            <div class="text-center mb-4"><h1 class="mb-0 h3">Nueva contraseña</h1></div>
+                            <form id="form-reset" class="mt-4" novalidate>
+                                <div class="form-group mb-4">
+                                    <label for="reset-email">Correo electrónico</label>
+                                    <input type="email" class="form-control" id="reset-email" name="email" autocomplete="username" required>
+                                </div>
+                                <div class="form-group mb-4">
+                                    <label for="reset-token">Código recibido por correo</label>
+                                    <input type="text" class="form-control" id="reset-token" name="token" autocomplete="one-time-code" required>
+                                </div>
+                                <div class="form-group mb-4">
+                                    <label for="reset-password">Nueva contraseña</label>
+                                    <input type="password" class="form-control" id="reset-password" name="newPassword" autocomplete="new-password" required>
+                                </div>
+                                <div class="d-grid"><button type="submit" class="btn btn-primary">Cambiar contraseña</button></div>
+                            </form>
+                            <div class="mt-4 small text-center"><a href="#/login">Volver a iniciar sesión</a></div>
+                        </section>
+
+                        <!-- Session (placeholder until the Angular application exists) -->
+                        <section id="view-session" data-view hidden>
+                            <div class="text-center mb-4"><h1 class="mb-0 h3">Sesión iniciada</h1></div>
+                            <dl class="mb-4">
+                                <dt>Usuario</dt><dd id="session-user" class="text-break"></dd>
+                                <dt>Roles</dt><dd id="session-roles"></dd>
+                                <dt>El acceso vence</dt><dd id="session-expires" class="mb-0"></dd>
+                            </dl>
+                            <p class="small text-gray">Pantalla provisoria: la aplicación completa aún no está disponible.</p>
+                            <div class="d-grid"><button type="button" id="btn-logout" class="btn btn-outline-gray-500">Cerrar sesión</button></div>
+                        </section>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+<script src="/js/app.js"></script>
+</body>
+</html>
